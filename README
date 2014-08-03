@@ -1,0 +1,18 @@
+== Erlang application/library for IRC protocol ==
+
+ealirc is an Erlang application/library for IRC protocol. Initially designed
+as IRC client, with some blurry plans to extend it to support server side.
+
+This library is intended to fit well into OTP patterns, so several behaviours
+are provided to ease implementation.
+
+Note that this is just a library, so it doesn't provide any supervision tree
+on its own, in the similar way that gen_tcp or gen_server don't do that.
+
+== Contact ==
+
+ealirc was written by Stanislaw Klekot <dozzie at jarowit.net>.
+The primary distribution point is <http://dozzie.jarowit.net/>, with
+a secondary address on GitHub <https://github.com/dozzie/ealirc>.
+
+ealirc is distributed under 3-clause BSD license.
