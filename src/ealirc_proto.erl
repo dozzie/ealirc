@@ -710,8 +710,8 @@ info(Prefix, NickOrServer) ->
 -spec servlist(prefix()) ->
   {ok, string()} | {error, term()}.
 
-servlist(_Prefix) ->
-  'TODO'.
+servlist(Prefix) ->
+  encode(Prefix, "SERVLIST", []).
 
 %% @doc List services visible to current user.
 %%   `ServerMask' limits the services to the ones running on matching servers.
@@ -719,8 +719,8 @@ servlist(_Prefix) ->
 -spec servlist(prefix(), string()) ->
   {ok, string()} | {error, term()}.
 
-servlist(_Prefix, _ServerMask) ->
-  'TODO'.
+servlist(Prefix, ServerMask) ->
+  encode(Prefix, "SERVLIST", [ServerMask]).
 
 %% @doc List services visible to current user.
 %%   `ServerMask' limits the services to the ones running on matching servers.
@@ -731,16 +731,16 @@ servlist(_Prefix, _ServerMask) ->
 -spec servlist(prefix(), string(), string()) ->
   {ok, string()} | {error, term()}.
 
-servlist(_Prefix, _ServerMask, _Type) ->
-  'TODO'.
+servlist(Prefix, ServerMask, Type) ->
+  encode(Prefix, "SERVLIST", [ServerMask, Type]).
 
 %% @doc Send a query to service.
 
 -spec squery(prefix(), nick(), string()) ->
   {ok, string()} | {error, term()}.
 
-squery(_Prefix, _Service, _Query) ->
-  'TODO'.
+squery(Prefix, Service, Query) ->
+  encode(Prefix, "SERVLIST", [Service, Query]).
 
 %% }}}
 %%----------------------------------------------------------
@@ -751,48 +751,50 @@ squery(_Prefix, _Service, _Query) ->
 -spec who(prefix()) ->
   {ok, string()} | {error, term()}.
 
-who(_Prefix) ->
-  'TODO'.
+who(Prefix) ->
+  encode(Prefix, "WHO", []).
 
 %% @doc List all users matching the mask.
 
 -spec who(prefix(), string()) ->
   {ok, string()} | {error, term()}.
 
-who(_Prefix, _Mask) ->
-  'TODO'.
+who(Prefix, Mask) ->
+  encode(Prefix, "WHO", [Mask]).
 
 %% @doc List all users matching the mask who are also operators.
 
 -spec who(prefix(), string(), o) ->
   {ok, string()} | {error, term()}.
 
-who(_Prefix, _Mask, o = _Limit) ->
-  'TODO'.
+who(Prefix, Mask, o = _Limit) ->
+  encode(Prefix, "WHO", [Mask, "o"]).
 
 %% @doc Request information about specified user(s).
 
 -spec whois(prefix(), [string()]) ->
   {ok, string()} | {error, term()}.
 
-whois(_Prefix, _UserMasks) ->
-  'TODO'.
+whois(Prefix, UserMasks) ->
+  encode(Prefix, "WHOIS", [UserMasks]).
 
 %% @doc Request information about specified user(s).
 
 -spec whois(prefix(), server(), [string()]) ->
   {ok, string()} | {error, term()}.
 
-whois(_Prefix, _Server, _UserMasks) ->
-  'TODO'.
+whois(Prefix, Server, UserMasks) ->
+  UserMaskList = string:join(UserMasks, ","),
+  encode(Prefix, "WHOIS", [Server, UserMaskList]).
 
 %% @doc Request information about nicknames that no longer exist.
 
 -spec whowas(prefix(), [nick()]) ->
   {ok, string()} | {error, term()}.
 
-whowas(_Prefix, _Nicks) ->
-  'TODO'.
+whowas(Prefix, Nicks) ->
+  NickList = string:join(Nicks, ","),
+  encode(Prefix, "WHOWAS", [NickList]).
 
 %% @doc Request information about nicknames that no longer exist.
 %%   At most `Count' entries are returned. If `Count' is 0 or negative, all
@@ -801,8 +803,9 @@ whowas(_Prefix, _Nicks) ->
 -spec whowas(prefix(), [nick()], integer()) ->
   {ok, string()} | {error, term()}.
 
-whowas(_Prefix, _Nicks, _Count) ->
-  'TODO'.
+whowas(Prefix, Nicks, Count) ->
+  NickList = string:join(Nicks, ","),
+  encode(Prefix, "WHOWAS", [NickList, integer_to_list(Count)]).
 
 %% @doc Request information about nicknames that no longer exist.
 %%   At most `Count' entries are returned. If `Count' is 0 or negative, all
@@ -811,8 +814,9 @@ whowas(_Prefix, _Nicks, _Count) ->
 -spec whowas(prefix(), [nick()], integer(), server()) ->
   {ok, string()} | {error, term()}.
 
-whowas(_Prefix, _Nicks, _Count, _Server) ->
-  'TODO'.
+whowas(Prefix, Nicks, Count, Server) ->
+  NickList = string:join(Nicks, ","),
+  encode(Prefix, "WHOWAS", [NickList, integer_to_list(Count), Server]).
 
 %% }}}
 %%----------------------------------------------------------
@@ -823,40 +827,40 @@ whowas(_Prefix, _Nicks, _Count, _Server) ->
 -spec kill(prefix(), nick(), string()) ->
   {ok, string()} | {error, term()}.
 
-kill(_Prefix, _Nick, _Comment) ->
-  'TODO'.
+kill(Prefix, Nick, Comment) ->
+  encode(Prefix, "KILL", [Nick, Comment]).
 
 %% @doc Send <i>ping</i> message to server.
 
 -spec ping(prefix(), server()) ->
   {ok, string()} | {error, term()}.
 
-ping(_Prefix, _Target) ->
-  'TODO'.
+ping(Prefix, Target) ->
+  encode(Prefix, "PING", [Target]).
 
 %% @doc Order a server to send <i>ping</i> message to server.
 
 -spec ping(prefix(), server(), server()) ->
   {ok, string()} | {error, term()}.
 
-ping(_Prefix, _Server, _Target) ->
-  'TODO'.
+ping(Prefix, Server, Target) ->
+  encode(Prefix, "PING", [Server, Target]).
 
 %% @doc Send <i>pong</i> reply to server.
 
 -spec pong(prefix(), server()) ->
   {ok, string()} | {error, term()}.
 
-pong(_Prefix, _Responder) ->
-  'TODO'.
+pong(Prefix, Responder) ->
+  encode(Prefix, "PONG", [Responder]).
 
 %% @doc Send <i>pong</i> reply to server.
 
 -spec pong(prefix(), server(), server()) ->
   {ok, string()} | {error, term()}.
 
-pong(_Prefix, _Responder, _Target) ->
-  'TODO'.
+pong(Prefix, Responder, Target) ->
+  encode(Prefix, "PONG", [Responder, Target]).
 
 %% @doc Report error.
 %%   This message is not intended to be sent from typical client.
@@ -864,8 +868,8 @@ pong(_Prefix, _Responder, _Target) ->
 -spec error(prefix(), string()) ->
   {ok, string()} | {error, term()}.
 
-error(_Prefix, _Message) ->
-  'TODO'.
+error(Prefix, Message) ->
+  encode(Prefix, "ERROR", [Message]).
 
 %% }}}
 %%----------------------------------------------------------
@@ -876,88 +880,88 @@ error(_Prefix, _Message) ->
 -spec away(prefix()) ->
   {ok, string()} | {error, term()}.
 
-away(_Prefix) ->
-  'TODO'.
+away(Prefix) ->
+  encode(Prefix, "AWAY", []).
 
 %% @doc Mark the user as being away from keyboard.
 
 -spec away(prefix(), string()) ->
   {ok, string()} | {error, term()}.
 
-away(_Prefix, _Message) ->
-  'TODO'.
+away(Prefix, Message) ->
+  encode(Prefix, "AWAY", [Message]).
 
 %% @doc Force the server to reload configuration file.
 
 -spec rehash(prefix()) ->
   {ok, string()} | {error, term()}.
 
-rehash(_Prefix) ->
-  'TODO'.
+rehash(Prefix) ->
+  encode(Prefix, "REHASH", []).
 
 %% @doc Shutdown the server.
 
 -spec die(prefix()) ->
   {ok, string()} | {error, term()}.
 
-die(_Prefix) ->
-  'TODO'.
+die(Prefix) ->
+  encode(Prefix, "DIE", []).
 
 %% @doc Restart the server
 
 -spec restart(prefix()) ->
   {ok, string()} | {error, term()}.
 
-restart(_Prefix) ->
-  'TODO'.
+restart(Prefix) ->
+  encode(Prefix, "RESTART", []).
 
 %% @doc Call user logged in on local server to join IRC.
 
 -spec summon(prefix(), nick()) ->
   {ok, string()} | {error, term()}.
 
-summon(_Prefix, _User) ->
-  'TODO'.
+summon(Prefix, User) ->
+  encode(Prefix, "SUMMON", [User]).
 
 %% @doc Call user logged in on specified server to join IRC.
 
 -spec summon(prefix(), nick(), server()) ->
   {ok, string()} | {error, term()}.
 
-summon(_Prefix, _User, _Server) ->
-  'TODO'.
+summon(Prefix, User, Server) ->
+  encode(Prefix, "SUMMON", [User, Server]).
 
 %% @doc Call user logged in on specified server to join IRC channel.
 
 -spec summon(prefix(), nick(), server(), channel()) ->
   {ok, string()} | {error, term()}.
 
-summon(_Prefix, _User, _Server, _Channel) ->
-  'TODO'.
+summon(Prefix, User, Server, Channel) ->
+  encode(Prefix, "SUMMON", [User, Server, Channel]).
 
 %% @doc Request a list of logged in users.
 
 -spec users(prefix()) ->
   {ok, string()} | {error, term()}.
 
-users(_Prefix) ->
-  'TODO'.
+users(Prefix) ->
+  encode(Prefix, "USERS", []).
 
 %% @doc Request a list of logged in users.
 
 -spec users(prefix(), server()) ->
   {ok, string()} | {error, term()}.
 
-users(_Prefix, _Server) ->
-  'TODO'.
+users(Prefix, Server) ->
+  encode(Prefix, "USERS", [Server]).
 
 %% @doc Send a message to all users who have <i>+w</i> mode.
 
 -spec wallops(prefix(), string()) ->
   {ok, string()} | {error, term()}.
 
-wallops(_Prefix, _Message) ->
-  'TODO'.
+wallops(Prefix, Message) ->
+  encode(Prefix, "WALLOPS", [Message]).
 
 %% @doc List users' hosts.
 
@@ -965,8 +969,8 @@ wallops(_Prefix, _Message) ->
   {ok, string()} | {error, term()}.
 
 %% up to 5 users, list is sent space-separated
-userhost(_Prefix, _Nicks) ->
-  'TODO'.
+userhost(Prefix, Nicks) when is_list(hd(Nicks)), length(Nicks) =< 5 ->
+  encode(Prefix, "USERHOST", Nicks).
 
 %% @doc Check if specified users are present on IRC.
 %%   The query is processed by local server only and not passed further (but
@@ -976,8 +980,8 @@ userhost(_Prefix, _Nicks) ->
   {ok, string()} | {error, term()}.
 
 %% list is sent space-separated
-ison(_Prefix, _Nicks) ->
-  'TODO'.
+ison(Prefix, Nicks) when is_list(hd(Nicks)) ->
+  encode(Prefix, "ISON", Nicks).
 
 %% }}}
 %%----------------------------------------------------------
