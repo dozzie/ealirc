@@ -105,7 +105,13 @@ encode_args([String | Rest] = _Args) ->
 %% @doc Decode line into a well-formed message.
 %%   Function does not interpret or validate the message.
 %%
-%% @TODO split `nick!user@host' to tuple
+%% @TODO split `Prefix' to tuple:
+%%   <ul>
+%%     <li>`servername' (contains `"."')</li>
+%%     <li>`nick'</li>
+%%     <li>`nick@host'</li>
+%%     <li>`nick!user@host'</li>
+%%   </ul>
 
 -spec decode(string()) ->
   {ok, {prefix(), command(), [argument()]}} | {error, term()}.
