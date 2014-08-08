@@ -146,16 +146,13 @@ decode_command(Line) ->
 -spec decode_args(string()) ->
   [string()].
 
+decode_args(":" ++ Arg = _Line) ->
+  [Arg];
 decode_args(Line) ->
-  case decode_arg(Line) of
+  case space_split(Line) of
     {Arg, ""} -> [Arg];
     {Arg, Rest} -> [Arg | decode_args(Rest)]
   end.
-
-decode_arg(":" ++ String = _Line) ->
-  {String, ""};
-decode_arg(Line) ->
-  space_split(Line).
 
 %% }}}
 %%----------------------------------------------------------
