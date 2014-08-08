@@ -58,10 +58,43 @@ encode(Cmd, Args) ->
 %% @doc Encode IRC command as a string, ending with CR+LF.
 
 -spec encode(prefix(), command(), [argument()]) ->
-  {ok, iolist()} | {error, term()}.
+  {ok, string()} | {error, term()}.
 
-encode(_Prefix, _Cmd, _Args) ->
-  'TODO'.
+encode(Prefix, Cmd, Args) ->
+  StrPrefix = case Prefix of
+    none -> "";
+    % TODO: check `Prefix' for validity
+    _ when is_list(Prefix) -> ":" ++ Prefix ++ " "
+  end,
+  StrSuffix = case Args of
+    [] -> "";
+    _ when is_list(Args) -> " " ++ encode_args(Args)
+  end,
+  StrPrefix ++ Cmd ++ StrSuffix.
+
+%%----------------------------------------------------------
+%% encoding helper {{{
+
+%% @doc Encode arguments to IRC command.
+%%   Result has no leading spaces and <i>is not</i> terminated with CR+LF.
+%%
+%% @TODO check if the `Args' is not longer than 15 entries
+%% @TODO check if each of the `Args' is acceptable (i.e. CR and LF are
+%%   prohibited entirely, leading ":" and " " are only allowed in the last
+%%   argument)
+
+-spec encode_args([string()]) ->
+  string().
+
+encode_args([] = _Args) ->
+  "";
+encode_args([String] = _Args) ->
+  ":" ++ String;
+encode_args([String | Rest] = _Args) ->
+  String ++ " " ++ encode_args(Rest).
+
+%% }}}
+%%----------------------------------------------------------
 
 %% @doc Decode line into a well-formed message.
 %%   Function does not interpret or validate the message.
