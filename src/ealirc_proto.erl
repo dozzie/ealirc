@@ -105,9 +105,19 @@ encode_args([String | Rest] = _Args) ->
   {ok, {prefix(), command(), [argument()]}} | {error, term()}.
 
 decode(Line) ->
-  % TODO: try .. catch
-  #msg{prefix = Pfx, cmd = Cmd, args = Args} = decode_prefix(strip_crlf(Line)),
-  {ok, {Pfx, Cmd, Args}}.
+  try
+    #msg{prefix = Prefix, cmd = Cmd, args = Args}
+      = decode_prefix(strip_crlf(Line)),
+    {ok, {Prefix, Cmd, Args}}
+  catch
+    % XXX: errors if_clause and try_clause won't show up here
+    error:{badmatch, _Value} ->
+      {error, badarg};
+    error:function_clause ->
+      {error, badarg};
+    error:{case_clause, _Value} ->
+      {error, badarg}
+  end.
 
 %%----------------------------------------------------------
 %% decoding helpers {{{
