@@ -1,6 +1,10 @@
 %%%---------------------------------------------------------------------------
 %%% @doc
-%%%   Protocol handling.
+%%%   IRC protocol strings.
+%%%
+%%%   Note that all functions defined here that return string with IRC command
+%%%   produce the string <i>without</i> CR+LF line ending. To pass them to
+%%%   server you still need to add it yourself.
 %%% @end
 %%%---------------------------------------------------------------------------
 
@@ -49,15 +53,15 @@
 
 %%%---------------------------------------------------------------------------
 
-%% @doc Encode IRC command as a string, ending with CR+LF.
+%% @doc Encode IRC command as a string, without line ending.
 
 -spec encode(command(), [argument()]) ->
-  {ok, iolist()} | {error, term()}.
+  {ok, string()} | {error, term()}.
 
 encode(Cmd, Args) ->
   encode(none, Cmd, Args).
 
-%% @doc Encode IRC command as a string, ending with CR+LF.
+%% @doc Encode IRC command as a string, without line ending.
 
 -spec encode(prefix(), command(), [argument()]) ->
   {ok, string()} | {error, term()}.
