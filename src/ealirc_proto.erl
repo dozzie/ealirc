@@ -45,6 +45,8 @@
 -type user_mode() :: term().
 -type channel_mode() :: term().
 
+-record(msg, {prefix = none, cmd, args = []}).
+
 %%%---------------------------------------------------------------------------
 
 %% @doc Encode IRC command as a string, ending with CR+LF.
@@ -102,8 +104,95 @@ encode_args([String | Rest] = _Args) ->
 -spec decode(string()) ->
   {ok, {prefix(), command(), [argument()]}} | {error, term()}.
 
-decode(_Line) ->
-  'TODO'.
+decode(Line) ->
+  % TODO: try .. catch
+  #msg{prefix = Pfx, cmd = Cmd, args = Args} = decode_prefix(strip_crlf(Line)),
+  {ok, {Pfx, Cmd, Args}}.
+
+%%----------------------------------------------------------
+%% decoding helpers {{{
+
+%% @doc Decode command prefix and pass the line further.
+
+-spec decode_prefix(string()) ->
+  #msg{}.
+
+decode_prefix(":" ++ Rest = _Line) ->
+  % TODO: validate prefix (servername | nick [["!" user] "@" host]
+  {Prefix, Rest1} = space_split(Rest),
+  {Cmd, Args} = decode_command(Rest1),
+  #msg{prefix = Prefix, cmd = Cmd, args = Args};
+decode_prefix(Line) when hd(Line) /= $  ->
+  {Cmd, Args} = decode_command(Line),
+  #msg{prefix = none, cmd = Cmd, args = Args}.
+
+%% @doc Decode command and pass the line further.
+
+-spec decode_command(string()) ->
+  {string(), [string()]}.
+
+decode_command([C1, C2, C3, $  | Rest] = _Line)
+when C1 >= $0, C1 =< $9, C2 >= $0, C2 =< $9, C3 >= $0, C3 =< $9 ->
+  Cmd = (C1 - $0) * 100 + (C2 - $0) * 10 + (C3 - $0),
+  Args = decode_args(string:strip(Rest, left)),
+  {Cmd, Args};
+decode_command(Line) ->
+  {Cmd, ArgsString} = space_split(Line),
+  Args = decode_args(ArgsString),
+  {Cmd, Args}.
+
+%% @doc Decode arguments.
+
+-spec decode_args(string()) ->
+  [string()].
+
+decode_args(Line) ->
+  case decode_arg(Line) of
+    {Arg, ""} -> [Arg];
+    {Arg, Rest} -> [Arg | decode_args(Rest)]
+  end.
+
+decode_arg(":" ++ String = _Line) ->
+  {String, ""};
+decode_arg(Line) ->
+  space_split(Line).
+
+%% }}}
+%%----------------------------------------------------------
+%% helpers for decoding helpers {{{
+
+%% @doc Strip line ending, CR+LF or LF.
+
+-spec strip_crlf(string()) ->
+  string().
+
+strip_crlf("\r\n") -> "";
+strip_crlf("\n")   -> "";
+strip_crlf("")     -> "";
+strip_crlf([C | Rest]) -> [C | strip_crlf(Rest)].
+
+%% @doc Split string into two substrings on first spaces sequence.
+
+-spec space_split(string(), string()) ->
+  {string(), string()}.
+
+space_split("" = _String, Acc) ->
+  {lists:reverse(Acc), ""}; % or `none'?
+space_split(" " ++ Rest = _String, Acc) ->
+  {lists:reverse(Acc), string:strip(Rest, left)};
+space_split([C | Rest] = _String, Acc) ->
+  space_split(Rest, [C | Acc]).
+
+%% @doc Split string into two substrings on first spaces sequence.
+
+-spec space_split(string()) ->
+  {string(), string()}.
+
+space_split(String) ->
+  space_split(String, "").
+
+%% }}}
+%%----------------------------------------------------------
 
 %%%---------------------------------------------------------------------------
 
