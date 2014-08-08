@@ -76,7 +76,7 @@ encode(Prefix, Cmd, Args) ->
     [] -> "";
     _ when is_list(Args) -> " " ++ encode_args(Args)
   end,
-  StrPrefix ++ Cmd ++ StrSuffix.
+  {ok, StrPrefix ++ Cmd ++ StrSuffix}.
 
 %%----------------------------------------------------------
 %% encoding helper {{{
