@@ -226,16 +226,16 @@ parse({_Prefix, _Cmd, _Args} = _Message) ->
 -spec pass(prefix(), string()) ->
   {ok, string()} | {error, term()}.
 
-pass(_Prefix, _Password) ->
-  'TODO'.
+pass(Prefix, Password) ->
+  encode(Prefix, "PASS", Password).
 
 %% @doc Nick change/set request.
 
 -spec nick(prefix(), nick()) ->
   {ok, string()} | {error, term()}.
 
-nick(_Prefix, _Nick) ->
-  'TODO'.
+nick(Prefix, Nick) ->
+  encode(Prefix, "NICK", Nick).
 
 %% @doc Passing username and realname.
 
@@ -252,27 +252,31 @@ user(Prefix, User, Mode, RealName) ->
            string(), string()) ->
   {ok, string()} | {error, term()}.
 
-user(_Prefix, _User, _Mode, _Unused, _RealName) ->
-  % Mode -- bitmask; 8 for invisible, 4 for wallops
-  'TODO'.
+user(Prefix, User, Mode, Unused, RealName) ->
+  ModeStr = case Mode of
+    none -> "0";
+    wallops -> "4";
+    invisible -> "8";
+    invisible_wallops -> "12"
+  end,
+  encode(Prefix, "USER", [User, ModeStr, Unused, RealName]).
 
 %% @doc Obtain operator privileges.
 
 -spec oper(prefix(), nick(), string()) ->
   {ok, string()} | {error, term()}.
 
-oper(_Prefix, _User, _Password) ->
-  'TODO'.
+oper(Prefix, User, Password) ->
+  encode(Prefix, "OPER", [User, Password]).
 
 %% @doc Set user or channel mode.
 
 -spec mode(prefix(), nick(),    [user_mode()])    -> ok;
           (prefix(), channel(), [channel_mode()]) -> ok.
 
-mode(_Prefix, "#" ++ _ = _Channel, _Modes) -> 'TODO';
-mode(_Prefix, "+" ++ _ = _Channel, _Modes) -> 'TODO';
-mode(_Prefix, "!" ++ _ = _Channel, _Modes) -> 'TODO';
-mode(_Prefix, "&" ++ _ = _Channel, _Modes) -> 'TODO';
+mode(_Prefix, [T | _] = _Channel, _Modes)
+when T == $#; T == $+; T == $!; T == $& ->
+  'TODO';
 mode(_Prefix, _Nick, _Modes) ->
   'TODO'.
 
@@ -281,8 +285,8 @@ mode(_Prefix, _Nick, _Modes) ->
 -spec service(prefix(), nick(), string(), string(), string()) ->
   {ok, string()} | {error, term()}.
 
-service(_Prefix, _Nick, _Distribution, _Type, _Info) ->
-  'TODO'.
+service(Prefix, Nick, Distribution, Type, Info) ->
+  service(Prefix, Nick, "*", Distribution, Type, "*", Info).
 
 %% @doc Service registration message.
 
@@ -290,32 +294,33 @@ service(_Prefix, _Nick, _Distribution, _Type, _Info) ->
               string()) ->
   {ok, string()} | {error, term()}.
 
-service(_Prefix, _Nick, _Reserved, _Distribution, _Type, _Reserved1, _Info) ->
-  'TODO'.
+service(Prefix, Nick, Reserved, Distribution, Type, Reserved1, Info) ->
+  encode(Prefix, "SERVICE",
+                 [Nick, Reserved, Distribution, Type, Reserved1, Info]).
 
 %% @doc Quit message.
 
 -spec quit(prefix()) ->
   {ok, string()} | {error, term()}.
 
-quit(_Prefix) ->
-  'TODO'.
+quit(Prefix) ->
+  encode(Prefix, "QUIT", []).
 
 %% @doc Quit message.
 
 -spec quit(prefix(), string()) ->
   {ok, string()} | {error, term()}.
 
-quit(_Prefix, _Message) ->
-  'TODO'.
+quit(Prefix, Message) ->
+  encode(Prefix, "QUIT", [Message]).
 
 %% @doc Disconnect server links.
 
 -spec squit(prefix(), string(), string()) ->
   {ok, string()} | {error, term()}.
 
-squit(_Prefix, _Server, _Comment) ->
-  'TODO'.
+squit(Prefix, Server, Comment) ->
+  encode(Prefix, "SQUIT", [Server, Comment]).
 
 %% }}}
 %%----------------------------------------------------------
@@ -328,109 +333,124 @@ squit(_Prefix, _Server, _Comment) ->
 %%   Special case of integer 0 is for <i>JOIN 0</i> IRC command, which leaves
 %%   all the channels user is in.
 
--spec join(prefix(), [channel() | {channel(), string()}] | 0) ->
+-spec join(prefix(), [channel()] | [{channel(), string()}] | 0) ->
   {ok, string()} | {error, term()}.
 
-join(_Prefix, 0 = _Channels) ->
-  'TODO';
-join(_Prefix, _Channels) ->
-  'TODO'.
+join(Prefix, 0 = _Channels) ->
+  encode(Prefix, "JOIN", ["0"]);
+join(Prefix, [{_,_} | _] = Channels) ->
+  ChanList = string:join([C || {C,_} <- Channels], ","),
+  KeysList = string:join([K || {_,K} <- Channels], ","),
+  encode(Prefix, "JOIN", [ChanList, KeysList]);
+join(Prefix, [_ | _] = Channels) ->
+  ChanList = string:join(Channels, ","),
+  encode(Prefix, "JOIN", [ChanList]).
 
 %% @doc Leave specified channels.
 
 -spec part(prefix(), [channel()]) ->
   {ok, string()} | {error, term()}.
 
-part(_Prefix, _Channels) ->
-  'TODO'.
+part(Prefix, Channels) ->
+  ChanList = string:join(Channels, ","),
+  encode(Prefix, "PART", [ChanList]).
 
 %% @doc Leave specified channels.
 
 -spec part(prefix(), [channel()], string()) ->
   {ok, string()} | {error, term()}.
 
-part(_Prefix, _Channels, _Message) ->
-  'TODO'.
+part(Prefix, Channels, Message) ->
+  ChanList = string:join(Channels, ","),
+  encode(Prefix, "PART", [ChanList, Message]).
 
 %% @doc Request a topic for the channel.
 
 -spec topic(prefix(), channel()) ->
   {ok, string()} | {error, term()}.
 
-topic(_Prefix, _Channel) ->
-  'TODO'.
+topic(Prefix, Channel) ->
+  encode(Prefix, "TOPIC", [Channel]).
 
 %% @doc Set topic for specified channel.
 
 -spec topic(prefix(), channel(), string()) ->
   {ok, string()} | {error, term()}.
 
-topic(_Prefix, _Channel, _Topic) ->
-  'TODO'.
+topic(Prefix, Channel, Topic) ->
+  encode(Prefix, "TOPIC", [Channel, Topic]).
 
 %% @doc List nicknames on specified channels.
 
 -spec names(prefix(), [channel()]) ->
   {ok, string()} | {error, term()}.
 
-names(_Prefix, _Channels) ->
-  'TODO'.
+names(Prefix, Channels) ->
+  ChanList = string:join(Channels, ","),
+  encode(Prefix, "NAMES", [ChanList]).
 
 %% @doc List nicknames on specified channels.
 
 -spec names(prefix(), [channel()], server()) ->
   {ok, string()} | {error, term()}.
 
-names(_Prefix, _Channels, _Server) ->
-  'TODO'.
+names(Prefix, Channels, Server) ->
+  ChanList = string:join(Channels, ","),
+  encode(Prefix, "NAMES", [ChanList, Server]).
 
 %% @doc List channels and their topics.
 
 -spec list(prefix()) ->
   {ok, string()} | {error, term()}.
 
-list(_Prefix) ->
-  'TODO'.
+list(Prefix) ->
+  encode(Prefix, "LIST", []).
 
 %% @doc List channels and their topics.
 
 -spec list(prefix(), [channel()]) ->
   {ok, string()} | {error, term()}.
 
-list(_Prefix, _Channels) ->
-  'TODO'.
+list(Prefix, Channels) ->
+  ChanList = string:join(Channels, ","),
+  encode(Prefix, "LIST", [ChanList]).
 
 %% @doc List channels and their topics.
 
 -spec list(prefix(), [channel()], server()) ->
   {ok, string()} | {error, term()}.
 
-list(_Prefix, _Channels, _Server) ->
-  'TODO'.
+list(Prefix, Channels, Server) ->
+  ChanList = string:join(Channels, ","),
+  encode(Prefix, "LIST", [ChanList, Server]).
 
 %% @doc Invite user to a channel.
 
 -spec invite(prefix(), nick(), channel()) ->
   {ok, string()} | {error, term()}.
 
-invite(_Prefix, _Nick, _Channel) ->
-  'TODO'.
+invite(Prefix, Nick, Channel) ->
+  encode(Prefix, "INVITE", [Nick, Channel]).
 
 %% @doc Kick users from channels.
 
 -spec kick(prefix(), [channel()], [nick()]) ->
   {ok, string()} | {error, term()}.
 
-kick(_Prefix, _Channels, _Nicks) ->
-  'TODO'.
+kick(Prefix, Channels, Nicks) ->
+  ChanList = string:join(Channels, ","),
+  NickList = string:join(Nicks, ","),
+  encode(Prefix, "KICK", [ChanList, NickList]).
 
 %% @doc Kick users from channels.
 
 -spec kick(prefix(), [channel()], [nick()], string()) ->
   {ok, string()} | {error, term()}.
 
-kick(_Prefix, _Channels, _Nicks, _Comment) ->
-  'TODO'.
+kick(Prefix, Channels, Nicks, Comment) ->
+  ChanList = string:join(Channels, ","),
+  NickList = string:join(Nicks, ","),
+  encode(Prefix, "KICK", [ChanList, NickList, Comment]).
 
 %% }}}
 %%----------------------------------------------------------
@@ -448,26 +468,26 @@ kick(_Prefix, _Channels, _Nicks, _Comment) ->
 -spec privmsg(prefix(), nick() | channel(), string()) ->
   {ok, string()} | {error, term()}.
 
-privmsg(_Prefix, "#" ++ _ = _Channel, _Message) -> 'TODO';
-privmsg(_Prefix, "+" ++ _ = _Channel, _Message) -> 'TODO';
-privmsg(_Prefix, "!" ++ _ = _Channel, _Message) -> 'TODO';
-privmsg(_Prefix, "&" ++ _ = _Channel, _Message) -> 'TODO';
-privmsg(_Prefix, _Nick, _Message) ->
-  'TODO'.
+privmsg(Prefix, [T | _] = Channel, Message)
+when T == $#; T == $+; T == $!; T == $& ->
+  encode(Prefix, "PRIVMSG", [Channel, Message]);
+privmsg(Prefix, Nick, Message) ->
+  encode(Prefix, "PRIVMSG", [Nick, Message]).
 
 %% @doc Send a message to user or channel.
 %%   Messages sent with <i>NOTICE</i> are never getting any automated
 %%   response (e.g. delivery errors).
+%%
+%% @see privmsg/3
 
 -spec notice(prefix(), nick() | channel(), string()) ->
   {ok, string()} | {error, term()}.
 
-notice(_Prefix, "#" ++ _ = _Channel, _Message) -> 'TODO';
-notice(_Prefix, "+" ++ _ = _Channel, _Message) -> 'TODO';
-notice(_Prefix, "!" ++ _ = _Channel, _Message) -> 'TODO';
-notice(_Prefix, "&" ++ _ = _Channel, _Message) -> 'TODO';
-notice(_Prefix, _Nick, _Message) ->
-  'TODO'.
+notice(Prefix, [T | _] = Channel, Message)
+when T == $#; T == $+; T == $!; T == $& ->
+  encode(Prefix, "NOTICE", [Channel, Message]);
+notice(Prefix, Nick, Message) ->
+  encode(Prefix, "NOTICE", [Nick, Message]).
 
 %% }}}
 %%----------------------------------------------------------
@@ -478,24 +498,24 @@ notice(_Prefix, _Nick, _Message) ->
 -spec motd(prefix()) ->
   {ok, string()} | {error, term()}.
 
-motd(_Prefix) ->
-  'TODO'.
+motd(Prefix) ->
+  encode(Prefix, "MOTD", []).
 
 %% @doc Request message-of-the-day from specific server.
 
 -spec motd(prefix(), server()) ->
   {ok, string()} | {error, term()}.
 
-motd(_Prefix, _Server) ->
-  'TODO'.
+motd(Prefix, Server) ->
+  encode(Prefix, "MOTD", [Server]).
 
 %% @doc Request statistics about IRC network users.
 
 -spec lusers(prefix()) ->
   {ok, string()} | {error, term()}.
 
-lusers(_Prefix) ->
-  'TODO'.
+lusers(Prefix) ->
+  encode(Prefix, "LUSERS", []).
 
 %% @doc Request statistics about IRC network users.
 %%   `Mask' specifies what part of the network statistics will be about.
@@ -503,8 +523,8 @@ lusers(_Prefix) ->
 -spec lusers(prefix(), string()) ->
   {ok, string()} | {error, term()}.
 
-lusers(_Prefix, _Mask) ->
-  'TODO'.
+lusers(Prefix, Mask) ->
+  encode(Prefix, "LUSERS", [Mask]).
 
 %% @doc Request statistics about IRC network users.
 %%   `Mask' specifies what part of the network statistics will be about.
@@ -512,42 +532,44 @@ lusers(_Prefix, _Mask) ->
 -spec lusers(prefix(), string(), server()) ->
   {ok, string()} | {error, term()}.
 
-lusers(_Prefix, _Mask, _Server) ->
-  'TODO'.
+lusers(Prefix, Mask, Server) ->
+  encode(Prefix, "LUSERS", [Mask, Server]).
 
 %% @doc Request version information from the server.
 
 -spec version(prefix()) ->
   {ok, string()} | {error, term()}.
 
-version(_Prefix) ->
-  'TODO'.
+version(Prefix) ->
+  encode(Prefix, "VERSION", []).
 
 %% @doc Request version information from the server.
 
 -spec version(prefix(), server()) ->
   {ok, string()} | {error, term()}.
 
-version(_Prefix, _Server) ->
-  'TODO'.
+version(Prefix, Server) ->
+  encode(Prefix, "VERSION", [Server]).
 
 %% @doc Request server statistics.
+%%
 %% @see stats/3
 
 -spec stats(prefix()) ->
   {ok, string()} | {error, term()}.
 
-stats(_Prefix) ->
-  'TODO'.
+stats(Prefix) ->
+  encode(Prefix, "STATS", []).
 
 %% @doc Request server statistics.
+%%
 %% @see stats/3
 
 -spec stats(prefix(), string()) ->
   {ok, string()} | {error, term()}.
 
-stats(_Prefix, _Query) ->
-  'TODO'.
+stats(Prefix, Query) ->
+  encode(Prefix, "STATS", [Query]).
 
 %% @doc Request server statistics.
 %%   Standard stats are:
@@ -562,16 +584,16 @@ stats(_Prefix, _Query) ->
 -spec stats(prefix(), string(), server()) ->
   {ok, string()} | {error, term()}.
 
-stats(_Prefix, _Query, _Server) ->
-  'TODO'.
+stats(Prefix, Query, Server) ->
+  encode(Prefix, "STATS", [Query, Server]).
 
 %% @doc List servers known to the queried server.
 
 -spec links(prefix()) ->
   {ok, string()} | {error, term()}.
 
-links(_Prefix) ->
-  'TODO'.
+links(Prefix) ->
+  encode(Prefix, "LINKS", []).
 
 %% @doc List servers known to the queried server.
 %%   `Mask' limits the returned list to only matching entries.
@@ -579,8 +601,8 @@ links(_Prefix) ->
 -spec links(prefix(), string()) ->
   {ok, string()} | {error, term()}.
 
-links(_Prefix, _Mask) ->
-  'TODO'.
+links(Prefix, Mask) ->
+  encode(Prefix, "LINKS", [Mask]).
 
 %% @doc List servers known to the queried server.
 %%   `Mask' limits the returned list to only matching entries.
@@ -590,40 +612,40 @@ links(_Prefix, _Mask) ->
 -spec links(prefix(), string(), string()) ->
   {ok, string()} | {error, term()}.
 
-links(_Prefix, _Target, _Mask) ->
-  'TODO'.
+links(Prefix, Target, Mask) ->
+  encode(Prefix, "LINKS", [Target, Mask]).
 
 %% @doc Request current time from server.
 
 -spec time(prefix()) ->
   {ok, string()} | {error, term()}.
 
-time(_Prefix) ->
-  'TODO'.
+time(Prefix) ->
+  encode(Prefix, "TIME", []).
 
 %% @doc Request current time from server.
 
 -spec time(prefix(), server()) ->
   {ok, string()} | {error, term()}.
 
-time(_Prefix, _Server) ->
-  'TODO'.
+time(Prefix, Server) ->
+  encode(Prefix, "TIME", [Server]).
 
 %% @doc Try to establish connection to target server.
 
 -spec connect(prefix(), server(), integer()) ->
   {ok, string()} | {error, term()}.
 
-connect(_Prefix, _Target, _Port) ->
-  'TODO'.
+connect(Prefix, Target, Port) ->
+  encode(Prefix, "CONNECT", [Target, integer_to_list(Port)]).
 
 %% @doc Try to establish connection to target server.
 
 -spec connect(prefix(), server(), integer(), server()) ->
   {ok, string()} | {error, term()}.
 
-connect(_Prefix, _Target, _Port, _Server) ->
-  'TODO'.
+connect(Prefix, Target, Port, Server) ->
+  encode(Prefix, "CONNECT", [Target, integer_to_list(Port), Server]).
 
 %% @doc List direct connections of local server.
 %%   At least, this is what RFC 2812 recommends for <i>TRACE</i> command
@@ -632,24 +654,24 @@ connect(_Prefix, _Target, _Port, _Server) ->
 -spec trace(prefix()) ->
   {ok, string()} | {error, term()}.
 
-trace(_Prefix) ->
-  'TODO'.
+trace(Prefix) ->
+  encode(Prefix, "TRACE", []).
 
 %% @doc Trace connection to specified server.
 
 -spec trace(prefix(), server()) ->
   {ok, string()} | {error, term()}.
 
-trace(_Prefix, _Target) ->
-  'TODO'.
+trace(Prefix, Target) ->
+  encode(Prefix, "TRACE", [Target]).
 
 %% @doc Request information about administrator of current server.
 
 -spec admin(prefix()) ->
   {ok, string()} | {error, term()}.
 
-admin(_Prefix) ->
-  'TODO'.
+admin(Prefix) ->
+  encode(Prefix, "ADMIN", []).
 
 %% @doc Request information about administrator of specified server.
 
@@ -658,16 +680,16 @@ admin(_Prefix) ->
 
 %% nick contains no "."; nick causes the server hosting user called `Nick' to
 %% reply
-admin(_Prefix, _NickOrServer) ->
-  'TODO'.
+admin(Prefix, NickOrServer) ->
+  encode(Prefix, "ADMIN", [NickOrServer]).
 
 %% @doc Request information about the software server runs on.
 
 -spec info(prefix()) ->
   {ok, string()} | {error, term()}.
 
-info(_Prefix) ->
-  'TODO'.
+info(Prefix) ->
+  encode(Prefix, "INFO", []).
 
 %% @doc Request information about the software server runs on.
 
@@ -676,8 +698,8 @@ info(_Prefix) ->
 
 %% nick contains no "."; nick causes the server hosting user called `Nick' to
 %% reply
-info(_Prefix, _NickOrServer) ->
-  'TODO'.
+info(Prefix, NickOrServer) ->
+  encode(Prefix, "INFO", [NickOrServer]).
 
 %% }}}
 %%----------------------------------------------------------
