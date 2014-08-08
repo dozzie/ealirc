@@ -224,7 +224,7 @@ parse({_Prefix, _Cmd, _Args} = _Message) ->
 %% @doc Password message.
 
 -spec pass(prefix(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 pass(_Prefix, _Password) ->
   'TODO'.
@@ -232,7 +232,7 @@ pass(_Prefix, _Password) ->
 %% @doc Nick change/set request.
 
 -spec nick(prefix(), nick()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 nick(_Prefix, _Nick) ->
   'TODO'.
@@ -241,7 +241,7 @@ nick(_Prefix, _Nick) ->
 
 -spec user(prefix(), nick(), none | invisible | wallops | invisible_wallops,
            string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 user(Prefix, User, Mode, RealName) ->
   user(Prefix, User, Mode, "*", RealName).
@@ -250,7 +250,7 @@ user(Prefix, User, Mode, RealName) ->
 
 -spec user(prefix(), nick(), none | invisible | wallops | invisible_wallops,
            string(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 user(_Prefix, _User, _Mode, _Unused, _RealName) ->
   % Mode -- bitmask; 8 for invisible, 4 for wallops
@@ -259,7 +259,7 @@ user(_Prefix, _User, _Mode, _Unused, _RealName) ->
 %% @doc Obtain operator privileges.
 
 -spec oper(prefix(), nick(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 oper(_Prefix, _User, _Password) ->
   'TODO'.
@@ -279,7 +279,7 @@ mode(_Prefix, _Nick, _Modes) ->
 %% @doc Service registration message.
 
 -spec service(prefix(), nick(), string(), string(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 service(_Prefix, _Nick, _Distribution, _Type, _Info) ->
   'TODO'.
@@ -288,7 +288,7 @@ service(_Prefix, _Nick, _Distribution, _Type, _Info) ->
 
 -spec service(prefix(), nick(), string(), string(), string(), string(),
               string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 service(_Prefix, _Nick, _Reserved, _Distribution, _Type, _Reserved1, _Info) ->
   'TODO'.
@@ -296,7 +296,7 @@ service(_Prefix, _Nick, _Reserved, _Distribution, _Type, _Reserved1, _Info) ->
 %% @doc Quit message.
 
 -spec quit(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 quit(_Prefix) ->
   'TODO'.
@@ -304,7 +304,7 @@ quit(_Prefix) ->
 %% @doc Quit message.
 
 -spec quit(prefix(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 quit(_Prefix, _Message) ->
   'TODO'.
@@ -312,7 +312,7 @@ quit(_Prefix, _Message) ->
 %% @doc Disconnect server links.
 
 -spec squit(prefix(), string(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 squit(_Prefix, _Server, _Comment) ->
   'TODO'.
@@ -329,7 +329,7 @@ squit(_Prefix, _Server, _Comment) ->
 %%   all the channels user is in.
 
 -spec join(prefix(), [channel() | {channel(), string()}] | 0) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 join(_Prefix, 0 = _Channels) ->
   'TODO';
@@ -339,7 +339,7 @@ join(_Prefix, _Channels) ->
 %% @doc Leave specified channels.
 
 -spec part(prefix(), [channel()]) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 part(_Prefix, _Channels) ->
   'TODO'.
@@ -347,7 +347,7 @@ part(_Prefix, _Channels) ->
 %% @doc Leave specified channels.
 
 -spec part(prefix(), [channel()], string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 part(_Prefix, _Channels, _Message) ->
   'TODO'.
@@ -355,7 +355,7 @@ part(_Prefix, _Channels, _Message) ->
 %% @doc Request a topic for the channel.
 
 -spec topic(prefix(), channel()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 topic(_Prefix, _Channel) ->
   'TODO'.
@@ -363,7 +363,7 @@ topic(_Prefix, _Channel) ->
 %% @doc Set topic for specified channel.
 
 -spec topic(prefix(), channel(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 topic(_Prefix, _Channel, _Topic) ->
   'TODO'.
@@ -371,7 +371,7 @@ topic(_Prefix, _Channel, _Topic) ->
 %% @doc List nicknames on specified channels.
 
 -spec names(prefix(), [channel()]) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 names(_Prefix, _Channels) ->
   'TODO'.
@@ -379,7 +379,7 @@ names(_Prefix, _Channels) ->
 %% @doc List nicknames on specified channels.
 
 -spec names(prefix(), [channel()], server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 names(_Prefix, _Channels, _Server) ->
   'TODO'.
@@ -387,7 +387,7 @@ names(_Prefix, _Channels, _Server) ->
 %% @doc List channels and their topics.
 
 -spec list(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 list(_Prefix) ->
   'TODO'.
@@ -395,7 +395,7 @@ list(_Prefix) ->
 %% @doc List channels and their topics.
 
 -spec list(prefix(), [channel()]) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 list(_Prefix, _Channels) ->
   'TODO'.
@@ -403,7 +403,7 @@ list(_Prefix, _Channels) ->
 %% @doc List channels and their topics.
 
 -spec list(prefix(), [channel()], server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 list(_Prefix, _Channels, _Server) ->
   'TODO'.
@@ -411,7 +411,7 @@ list(_Prefix, _Channels, _Server) ->
 %% @doc Invite user to a channel.
 
 -spec invite(prefix(), nick(), channel()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 invite(_Prefix, _Nick, _Channel) ->
   'TODO'.
@@ -419,7 +419,7 @@ invite(_Prefix, _Nick, _Channel) ->
 %% @doc Kick users from channels.
 
 -spec kick(prefix(), [channel()], [nick()]) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 kick(_Prefix, _Channels, _Nicks) ->
   'TODO'.
@@ -427,7 +427,7 @@ kick(_Prefix, _Channels, _Nicks) ->
 %% @doc Kick users from channels.
 
 -spec kick(prefix(), [channel()], [nick()], string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 kick(_Prefix, _Channels, _Nicks, _Comment) ->
   'TODO'.
@@ -446,7 +446,7 @@ kick(_Prefix, _Channels, _Nicks, _Comment) ->
 %% @TODO sending messages to `#*.edu' (client host mask)
 
 -spec privmsg(prefix(), nick() | channel(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 privmsg(_Prefix, "#" ++ _ = _Channel, _Message) -> 'TODO';
 privmsg(_Prefix, "+" ++ _ = _Channel, _Message) -> 'TODO';
@@ -460,7 +460,7 @@ privmsg(_Prefix, _Nick, _Message) ->
 %%   response (e.g. delivery errors).
 
 -spec notice(prefix(), nick() | channel(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 notice(_Prefix, "#" ++ _ = _Channel, _Message) -> 'TODO';
 notice(_Prefix, "+" ++ _ = _Channel, _Message) -> 'TODO';
@@ -476,7 +476,7 @@ notice(_Prefix, _Nick, _Message) ->
 %% @doc Request message-of-the-day from server.
 
 -spec motd(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 motd(_Prefix) ->
   'TODO'.
@@ -484,7 +484,7 @@ motd(_Prefix) ->
 %% @doc Request message-of-the-day from specific server.
 
 -spec motd(prefix(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 motd(_Prefix, _Server) ->
   'TODO'.
@@ -492,7 +492,7 @@ motd(_Prefix, _Server) ->
 %% @doc Request statistics about IRC network users.
 
 -spec lusers(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 lusers(_Prefix) ->
   'TODO'.
@@ -501,7 +501,7 @@ lusers(_Prefix) ->
 %%   `Mask' specifies what part of the network statistics will be about.
 
 -spec lusers(prefix(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 lusers(_Prefix, _Mask) ->
   'TODO'.
@@ -510,7 +510,7 @@ lusers(_Prefix, _Mask) ->
 %%   `Mask' specifies what part of the network statistics will be about.
 
 -spec lusers(prefix(), string(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 lusers(_Prefix, _Mask, _Server) ->
   'TODO'.
@@ -518,7 +518,7 @@ lusers(_Prefix, _Mask, _Server) ->
 %% @doc Request version information from the server.
 
 -spec version(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 version(_Prefix) ->
   'TODO'.
@@ -526,7 +526,7 @@ version(_Prefix) ->
 %% @doc Request version information from the server.
 
 -spec version(prefix(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 version(_Prefix, _Server) ->
   'TODO'.
@@ -535,7 +535,7 @@ version(_Prefix, _Server) ->
 %% @see stats/3
 
 -spec stats(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 stats(_Prefix) ->
   'TODO'.
@@ -544,7 +544,7 @@ stats(_Prefix) ->
 %% @see stats/3
 
 -spec stats(prefix(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 stats(_Prefix, _Query) ->
   'TODO'.
@@ -560,7 +560,7 @@ stats(_Prefix, _Query) ->
 %%   </ul>
 
 -spec stats(prefix(), string(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 stats(_Prefix, _Query, _Server) ->
   'TODO'.
@@ -568,7 +568,7 @@ stats(_Prefix, _Query, _Server) ->
 %% @doc List servers known to the queried server.
 
 -spec links(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 links(_Prefix) ->
   'TODO'.
@@ -577,7 +577,7 @@ links(_Prefix) ->
 %%   `Mask' limits the returned list to only matching entries.
 
 -spec links(prefix(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 links(_Prefix, _Mask) ->
   'TODO'.
@@ -588,7 +588,7 @@ links(_Prefix, _Mask) ->
 %%   the query.
 
 -spec links(prefix(), string(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 links(_Prefix, _Target, _Mask) ->
   'TODO'.
@@ -596,7 +596,7 @@ links(_Prefix, _Target, _Mask) ->
 %% @doc Request current time from server.
 
 -spec time(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 time(_Prefix) ->
   'TODO'.
@@ -604,7 +604,7 @@ time(_Prefix) ->
 %% @doc Request current time from server.
 
 -spec time(prefix(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 time(_Prefix, _Server) ->
   'TODO'.
@@ -612,7 +612,7 @@ time(_Prefix, _Server) ->
 %% @doc Try to establish connection to target server.
 
 -spec connect(prefix(), server(), integer()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 connect(_Prefix, _Target, _Port) ->
   'TODO'.
@@ -620,7 +620,7 @@ connect(_Prefix, _Target, _Port) ->
 %% @doc Try to establish connection to target server.
 
 -spec connect(prefix(), server(), integer(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 connect(_Prefix, _Target, _Port, _Server) ->
   'TODO'.
@@ -630,7 +630,7 @@ connect(_Prefix, _Target, _Port, _Server) ->
 %%   without arguments.
 
 -spec trace(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 trace(_Prefix) ->
   'TODO'.
@@ -638,7 +638,7 @@ trace(_Prefix) ->
 %% @doc Trace connection to specified server.
 
 -spec trace(prefix(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 trace(_Prefix, _Target) ->
   'TODO'.
@@ -646,7 +646,7 @@ trace(_Prefix, _Target) ->
 %% @doc Request information about administrator of current server.
 
 -spec admin(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 admin(_Prefix) ->
   'TODO'.
@@ -654,7 +654,7 @@ admin(_Prefix) ->
 %% @doc Request information about administrator of specified server.
 
 -spec admin(prefix(), nick() | server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 %% nick contains no "."; nick causes the server hosting user called `Nick' to
 %% reply
@@ -664,7 +664,7 @@ admin(_Prefix, _NickOrServer) ->
 %% @doc Request information about the software server runs on.
 
 -spec info(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 info(_Prefix) ->
   'TODO'.
@@ -672,7 +672,7 @@ info(_Prefix) ->
 %% @doc Request information about the software server runs on.
 
 -spec info(prefix(), nick() | server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 %% nick contains no "."; nick causes the server hosting user called `Nick' to
 %% reply
@@ -686,7 +686,7 @@ info(_Prefix, _NickOrServer) ->
 %% @doc List servers known to the queried server.
 
 -spec servlist(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 servlist(_Prefix) ->
   'TODO'.
@@ -695,7 +695,7 @@ servlist(_Prefix) ->
 %%   `ServerMask' limits the services to the ones running on matching servers.
 
 -spec servlist(prefix(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 servlist(_Prefix, _ServerMask) ->
   'TODO'.
@@ -707,7 +707,7 @@ servlist(_Prefix, _ServerMask) ->
 %% @see service/5
 
 -spec servlist(prefix(), string(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 servlist(_Prefix, _ServerMask, _Type) ->
   'TODO'.
@@ -715,7 +715,7 @@ servlist(_Prefix, _ServerMask, _Type) ->
 %% @doc Send a query to service.
 
 -spec squery(prefix(), nick(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 squery(_Prefix, _Service, _Query) ->
   'TODO'.
@@ -727,7 +727,7 @@ squery(_Prefix, _Service, _Query) ->
 %% @doc List all visible users.
 
 -spec who(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 who(_Prefix) ->
   'TODO'.
@@ -735,7 +735,7 @@ who(_Prefix) ->
 %% @doc List all users matching the mask.
 
 -spec who(prefix(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 who(_Prefix, _Mask) ->
   'TODO'.
@@ -743,7 +743,7 @@ who(_Prefix, _Mask) ->
 %% @doc List all users matching the mask who are also operators.
 
 -spec who(prefix(), string(), o) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 who(_Prefix, _Mask, o = _Limit) ->
   'TODO'.
@@ -751,7 +751,7 @@ who(_Prefix, _Mask, o = _Limit) ->
 %% @doc Request information about specified user(s).
 
 -spec whois(prefix(), [string()]) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 whois(_Prefix, _UserMasks) ->
   'TODO'.
@@ -759,7 +759,7 @@ whois(_Prefix, _UserMasks) ->
 %% @doc Request information about specified user(s).
 
 -spec whois(prefix(), server(), [string()]) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 whois(_Prefix, _Server, _UserMasks) ->
   'TODO'.
@@ -767,7 +767,7 @@ whois(_Prefix, _Server, _UserMasks) ->
 %% @doc Request information about nicknames that no longer exist.
 
 -spec whowas(prefix(), [nick()]) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 whowas(_Prefix, _Nicks) ->
   'TODO'.
@@ -777,7 +777,7 @@ whowas(_Prefix, _Nicks) ->
 %%   entries are returned.
 
 -spec whowas(prefix(), [nick()], integer()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 whowas(_Prefix, _Nicks, _Count) ->
   'TODO'.
@@ -787,7 +787,7 @@ whowas(_Prefix, _Nicks, _Count) ->
 %%   entries are returned.
 
 -spec whowas(prefix(), [nick()], integer(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 whowas(_Prefix, _Nicks, _Count, _Server) ->
   'TODO'.
@@ -799,7 +799,7 @@ whowas(_Prefix, _Nicks, _Count, _Server) ->
 %% @doc Terminate connection between specified user and his server.
 
 -spec kill(prefix(), nick(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 kill(_Prefix, _Nick, _Comment) ->
   'TODO'.
@@ -807,7 +807,7 @@ kill(_Prefix, _Nick, _Comment) ->
 %% @doc Send <i>ping</i> message to server.
 
 -spec ping(prefix(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 ping(_Prefix, _Target) ->
   'TODO'.
@@ -815,7 +815,7 @@ ping(_Prefix, _Target) ->
 %% @doc Order a server to send <i>ping</i> message to server.
 
 -spec ping(prefix(), server(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 ping(_Prefix, _Server, _Target) ->
   'TODO'.
@@ -823,7 +823,7 @@ ping(_Prefix, _Server, _Target) ->
 %% @doc Send <i>pong</i> reply to server.
 
 -spec pong(prefix(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 pong(_Prefix, _Responder) ->
   'TODO'.
@@ -831,7 +831,7 @@ pong(_Prefix, _Responder) ->
 %% @doc Send <i>pong</i> reply to server.
 
 -spec pong(prefix(), server(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 pong(_Prefix, _Responder, _Target) ->
   'TODO'.
@@ -840,7 +840,7 @@ pong(_Prefix, _Responder, _Target) ->
 %%   This message is not intended to be sent from typical client.
 
 -spec error(prefix(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 error(_Prefix, _Message) ->
   'TODO'.
@@ -852,7 +852,7 @@ error(_Prefix, _Message) ->
 %% @doc Mark the user as being away from keyboard.
 
 -spec away(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 away(_Prefix) ->
   'TODO'.
@@ -860,7 +860,7 @@ away(_Prefix) ->
 %% @doc Mark the user as being away from keyboard.
 
 -spec away(prefix(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 away(_Prefix, _Message) ->
   'TODO'.
@@ -868,7 +868,7 @@ away(_Prefix, _Message) ->
 %% @doc Force the server to reload configuration file.
 
 -spec rehash(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 rehash(_Prefix) ->
   'TODO'.
@@ -876,7 +876,7 @@ rehash(_Prefix) ->
 %% @doc Shutdown the server.
 
 -spec die(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 die(_Prefix) ->
   'TODO'.
@@ -884,7 +884,7 @@ die(_Prefix) ->
 %% @doc Restart the server
 
 -spec restart(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 restart(_Prefix) ->
   'TODO'.
@@ -892,7 +892,7 @@ restart(_Prefix) ->
 %% @doc Call user logged in on local server to join IRC.
 
 -spec summon(prefix(), nick()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 summon(_Prefix, _User) ->
   'TODO'.
@@ -900,7 +900,7 @@ summon(_Prefix, _User) ->
 %% @doc Call user logged in on specified server to join IRC.
 
 -spec summon(prefix(), nick(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 summon(_Prefix, _User, _Server) ->
   'TODO'.
@@ -908,7 +908,7 @@ summon(_Prefix, _User, _Server) ->
 %% @doc Call user logged in on specified server to join IRC channel.
 
 -spec summon(prefix(), nick(), server(), channel()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 summon(_Prefix, _User, _Server, _Channel) ->
   'TODO'.
@@ -916,7 +916,7 @@ summon(_Prefix, _User, _Server, _Channel) ->
 %% @doc Request a list of logged in users.
 
 -spec users(prefix()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 users(_Prefix) ->
   'TODO'.
@@ -924,7 +924,7 @@ users(_Prefix) ->
 %% @doc Request a list of logged in users.
 
 -spec users(prefix(), server()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 users(_Prefix, _Server) ->
   'TODO'.
@@ -932,7 +932,7 @@ users(_Prefix, _Server) ->
 %% @doc Send a message to all users who have <i>+w</i> mode.
 
 -spec wallops(prefix(), string()) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 wallops(_Prefix, _Message) ->
   'TODO'.
@@ -940,7 +940,7 @@ wallops(_Prefix, _Message) ->
 %% @doc List users' hosts.
 
 -spec userhost(prefix(), [nick()]) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 %% up to 5 users, list is sent space-separated
 userhost(_Prefix, _Nicks) ->
@@ -951,7 +951,7 @@ userhost(_Prefix, _Nicks) ->
 %%   servers generally know global state, so the response should be accurate).
 
 -spec ison(prefix(), [nick()]) ->
-  ok.
+  {ok, string()} | {error, term()}.
 
 %% list is sent space-separated
 ison(_Prefix, _Nicks) ->
