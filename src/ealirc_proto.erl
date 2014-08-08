@@ -104,6 +104,8 @@ encode_args([String | Rest] = _Args) ->
 
 %% @doc Decode line into a well-formed message.
 %%   Function does not interpret or validate the message.
+%%
+%% @TODO split `nick!user@host' to tuple
 
 -spec decode(string()) ->
   {ok, {prefix(), command(), [argument()]}} | {error, term()}.
@@ -227,7 +229,7 @@ parse({_Prefix, _Cmd, _Args} = _Message) ->
   {ok, string()} | {error, term()}.
 
 pass(Prefix, Password) ->
-  encode(Prefix, "PASS", Password).
+  encode(Prefix, "PASS", [Password]).
 
 %% @doc Nick change/set request.
 
@@ -235,7 +237,7 @@ pass(Prefix, Password) ->
   {ok, string()} | {error, term()}.
 
 nick(Prefix, Nick) ->
-  encode(Prefix, "NICK", Nick).
+  encode(Prefix, "NICK", [Nick]).
 
 %% @doc Passing username and realname.
 
