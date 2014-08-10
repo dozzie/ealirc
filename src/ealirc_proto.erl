@@ -103,7 +103,8 @@ encode_args([String | Rest] = _Args) ->
 %%----------------------------------------------------------
 
 %% @doc Decode line into a well-formed message.
-%%   Function does not interpret or validate the message.
+%%   Function does not interpret or validate the message. The returned command
+%%   is always upper case.
 %%
 %% @TODO split `Prefix' to tuple:
 %%   <ul>
@@ -120,7 +121,7 @@ decode(Line) ->
   try
     #msg{prefix = Prefix, cmd = Cmd, args = Args}
       = decode_prefix(strip_crlf(Line)),
-    {ok, {Prefix, Cmd, Args}}
+    {ok, {Prefix, string:to_upper(Cmd), Args}}
   catch
     % XXX: errors if_clause and try_clause won't show up here
     error:{badmatch, _Value} ->
