@@ -16,9 +16,10 @@
 -behaviour(gen_server).
 
 %%% public API
--export([start/4, start/5, start_link/4, start_link/5]).
--export([connect/5, connect_link/5]).
--export([quote/1, quote/2]).
+-export([start/4, start/5, start_link/4, start_link/5]). % start
+-export([connect/5, connect_link/5]). % connect+start
+-export([call/2, call/3, cast/2]).
+-export([quote/1, quote/2]). % send a message to IRC server
 
 %%% behaviour definition
 -export([behaviour_info/1]).
@@ -185,6 +186,34 @@ connect_link(Server, Port, Module, Args, Options) ->
 
 %% }}}
 %%----------------------------------------------------------
+%% gen_server-like commands {{{
+
+%% @doc Call {@link gen_ealirc} synchronously.
+
+-spec call(pid(), term()) ->
+  term().
+
+call(Pid, Request) ->
+  gen_server:call(Pid, Request).
+
+%% @doc Call {@link gen_ealirc} synchronously with timeout.
+
+-spec call(pid(), term(), timeout()) ->
+  term().
+
+call(Pid, Request, Timeout) ->
+  gen_server:call(Pid, Request, Timeout).
+
+%% @doc Send an asynchronous request to {@link gen_ealirc}.
+
+-spec cast(pid(), term()) ->
+  ok.
+
+cast(Pid, Request) ->
+  gen_server:cast(Pid, Request).
+
+%% }}}
+%%----------------------------------------------------------
 %% IRC commands {{{
 
 %% @doc Send raw IRC line to server.
@@ -201,7 +230,7 @@ quote(Line) ->
 %%   The line will be terminated with CR+LF automatically. Don't include it.
 
 quote(Pid, Line) ->
-  gen_server:cast(Pid, {gen_ealirc, Line}).
+  cast(Pid, {gen_ealirc, Line}).
 
 %% }}}
 %%----------------------------------------------------------
