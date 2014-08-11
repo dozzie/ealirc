@@ -118,14 +118,6 @@ encode_args([String | Rest] = _Args) ->
 %% @doc Decode line into a well-formed message.
 %%   Function does not interpret or validate the message. The returned command
 %%   is always upper case.
-%%
-%% @TODO split `Prefix' to tuple:
-%%   <ul>
-%%     <li>`servername' (contains `"."')</li>
-%%     <li>`nick'</li>
-%%     <li>`nick@host'</li>
-%%     <li>`nick!user@host'</li>
-%%   </ul>
 
 -spec decode(string()) ->
   {ok, {prefix(), command(), [argument()]}} | {error, term()}.
@@ -157,7 +149,7 @@ parse_prefix(":" ++ Rest = _Line) ->
   % TODO: validate prefix (servername | nick [["!" user] "@" host]
   {Prefix, Rest1} = space_split(Rest),
   {Cmd, Args} = parse_command(Rest1),
-  #msg{prefix = Prefix, cmd = Cmd, args = Args};
+  #msg{prefix = decode_prefix(Prefix), cmd = Cmd, args = Args};
 parse_prefix(Line) when hd(Line) /= $  ->
   {Cmd, Args} = parse_command(Line),
   #msg{prefix = none, cmd = Cmd, args = Args}.
@@ -298,8 +290,72 @@ user_prefix(Nick, User, Host) ->
 -spec decode_prefix(string()) ->
   server_prefix() | user_prefix().
 
-decode_prefix(_Prefix) ->
-  'TODO'.
+decode_prefix(Prefix) ->
+  parse_prefix_nick_or_server(Prefix, []).
+
+%%----------------------------------------------------------
+%% prefix decoding helper {{{
+
+%% @doc Extract user or server prefix structure from prefix string.
+
+-spec parse_prefix_nick_or_server(string(), string()) ->
+  server_prefix() | user_prefix().
+
+%% still can't tell whether nick or server
+parse_prefix_nick_or_server([C | Rest] = _Prefix, Acc)
+when C >= $a, C =< $z; C >= $A, C =< $Z; C >= $0, C =< $9; C == $- ->
+  parse_prefix_nick_or_server(Rest, [C | Acc]);
+
+%% this surely is prefix of some user (hostname can't have this in name)
+parse_prefix_nick_or_server([C | Rest] = _Prefix, Acc)
+when C == $[; C == $]; C == $\\; C == $`; C == $_; C == $^;
+     C == ${; C == $}; C == $| ->
+  parse_prefix_nick(Rest, [C | Acc]);
+
+%% `nick!user@host' or `nick@host'
+parse_prefix_nick_or_server([C | _Rest] = Prefix, Acc) when C == $!; C == $@ ->
+  parse_prefix_nick(Prefix, Acc);
+
+%% this surely is host, as nicks can't contain period
+parse_prefix_nick_or_server("." ++ Rest = _Prefix, Acc) ->
+  {server, lists:reverse(Acc) ++ Rest};
+
+%% still could be nick or server, but end of prefix occurred => it's a nick
+parse_prefix_nick_or_server([] = _Prefix, Acc) ->
+  Nick = lists:reverse(Acc),
+  {user, Nick, undefined, undefined}.
+
+%% @doc Extract nick, user and host parts from prefix.
+
+-spec parse_prefix_nick(string(), string()) ->
+  user_prefix().
+
+%% `nick', not caught by parse_prefix_nick_or_server/1 because of []\`_^{}|
+%% characters
+parse_prefix_nick([] = _Prefix, Acc) ->
+  Nick = lists:reverse(Acc),
+  {user, Nick, undefined, undefined};
+
+%% `nick@host'
+parse_prefix_nick("@" ++ Host, Acc) ->
+  Nick = lists:reverse(Acc),
+  {user, Nick, undefined, Host};
+
+%% `nick!user@host'
+parse_prefix_nick("!" ++ Rest, Acc) ->
+  [User, Host] = string:tokens(Rest, "@"),
+  Nick = lists:reverse(Acc),
+  {user, Nick, User, Host};
+
+%% nick not finished yet
+parse_prefix_nick([C | Rest] = _Prefix, Acc)
+when C >= $a, C =< $z; C >= $A, C =< $Z; C >= $0, C =< $9; C == $-;
+     C == $[; C == $]; C == $\\; C == $`; C == $_; C == $^;
+     C == ${; C == $}; C == $| ->
+  parse_prefix_nick(Rest, [C | Acc]).
+
+%% }}}
+%%----------------------------------------------------------
 
 %%%---------------------------------------------------------------------------
 
@@ -1141,7 +1197,7 @@ ison(Nicks) when is_list(hd(Nicks)) ->
 %%----------------------------------------------------------
 %% server replies (numeric) {{{
 
-%% TODO
+%% TODO: numeric replies
 
 %% }}}
 %%----------------------------------------------------------
