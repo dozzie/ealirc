@@ -83,8 +83,7 @@ encode(Cmd, Args) ->
 encode(Prefix, Cmd, Args) ->
   StrPrefix = case Prefix of
     none -> "";
-    % TODO: check `Prefix' for validity
-    _ when is_list(Prefix) -> ":" ++ Prefix ++ " "
+    _ -> ":" ++ encode_prefix(Prefix) ++ " "
   end,
   StrSuffix = case Args of
     [] -> "";
