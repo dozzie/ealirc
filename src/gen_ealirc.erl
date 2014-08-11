@@ -19,7 +19,13 @@
 -export([start/4, start/5, start_link/4, start_link/5]). % start
 -export([connect/5, connect_link/5]). % connect+start
 -export([call/2, call/3, cast/2]).
--export([quote/1, quote/2]). % send a message to IRC server
+-export([quote/2]). % send a message to IRC server
+-export([nick/2, user/4]).
+-export([mode/3, topic/3]).
+-export([ping/2, pong/2]).
+-export([invite/3, kick/3, kick/4]).
+-export([join/2, part/2, part/3, quit/1, quit/2]).
+-export([privmsg/3, notice/3]).
 
 %%% behaviour definition
 -export([behaviour_info/1]).
@@ -49,6 +55,8 @@
 
 %% @doc Start process using already prepared socket.
 %%
+%%   `Options' is a proplist suitable for {@link gen_server:start/3}.
+%%
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
 
@@ -67,6 +75,10 @@ start(Module, Args, Socket, Options) ->
   end.
 
 %% @doc Start registered process using already prepared socket.
+%%
+%%   `ServerName' is the same as for {@link gen_server:start/4}.
+%%
+%%   `Options' is a proplist suitable for {@link gen_server:start/4}.
 %%
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
@@ -87,6 +99,8 @@ start(ServerName, Module, Args, Socket, Options) ->
 
 %% @doc Start (linked) process using already prepared socket.
 %%
+%%   `Options' is a proplist suitable for {@link gen_server:start_link/4}.
+%%
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
 
@@ -105,6 +119,10 @@ start_link(Module, Args, Socket, Options) ->
   end.
 
 %% @doc Start registered (and linked) process using already prepared socket.
+%%
+%%   `ServerName' is the same as for {@link gen_server:start_link/4}.
+%%
+%%   `Options' is a proplist suitable for {@link gen_server:start_link/4}.
 %%
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
@@ -218,19 +236,242 @@ cast(Pid, Request) ->
 
 %% @doc Send raw IRC line to server.
 %%
-%%   This function is intended for use within {@link gen_ealirc} process.
-%%
-%%   The line will be terminated with CR+LF automatically. Don't include it.
+%%   The line will be terminated with CR+LF automatically. You don't need to
+%%   include it.
 
-quote(Line) ->
-  quote(self(), Line).
-
-%% @doc Send raw IRC line to server.
-%%
-%%   The line will be terminated with CR+LF automatically. Don't include it.
+-spec quote(pid(), string()) ->
+  ok.
 
 quote(Pid, Line) ->
   cast(Pid, {'$gen_irc_quote', Line}).
+
+%% @doc Nick change/set request.
+%%
+%% @see ealirc_proto:nick/1
+
+-spec nick(pid(), ealirc_proto:nick()) ->
+  ok | {error, term()}.
+
+nick(Pid, Nick) ->
+  case ealirc_proto:nick(Nick) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Passing username and realname.
+%%
+%% @see ealirc_proto:user/3
+
+-spec user(pid(), ealirc_proto:nick(), none | invisible | wallops | invisible_wallops,
+           string()) ->
+  ok | {error, term()}.
+
+user(Pid, User, Mode, RealName) ->
+  case ealirc_proto:user(User, Mode, RealName) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Set user or channel mode.
+%%
+%%   <b>WARNING</b>: be careful when mixing modes with and without arguments
+%%   (channel modes only). There's a risk of passing argument to wrong mode if
+%%   you incidentally omitted argument to, for example, `"+o"' or `"+I"'.
+%%
+%% @see ealirc_proto:mode/2
+%%
+%% @spec mode(pid(), ealirc_proto:nick() | ealirc_proto:channel(),
+%%            [ealirc_proto:user_mode()] | [ealirc_proto:channel_mode()]) ->
+%%   ok
+
+-spec mode(pid(), ealirc_proto:nick(),    [ealirc_proto:user_mode()])    -> ok;
+          (pid(), ealirc_proto:channel(), [ealirc_proto:channel_mode()]) -> ok.
+
+mode(Pid, NickOrChannel, Modes) ->
+  case ealirc_proto:mode(NickOrChannel, Modes) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Quit message.
+%%
+%% @see ealirc_proto:quit/0
+
+-spec quit(pid()) ->
+  ok | {error, term()}.
+
+quit(Pid) ->
+  case ealirc_proto:quit() of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Quit message.
+%%
+%% @see ealirc_proto:quit/1
+
+-spec quit(pid(), string()) ->
+  ok | {error, term()}.
+
+quit(Pid, Message) ->
+  case ealirc_proto:quit(Message) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Join provided channels.
+%%
+%%   Channel may be provided as a name or a tuple of `{Chan,Key}', containing
+%%   channel key.
+%%
+%%   Special case of integer 0 is for <i>JOIN 0</i> IRC command, which leaves
+%%   all the channels user is in.
+%%
+%% @see ealirc_proto:join/1
+
+-spec join(pid(), [ealirc_proto:channel()]
+           | [{ealirc_proto:channel(), string()}]
+           | 0) ->
+  ok | {error, term()}.
+
+join(Pid, Channels) ->
+  case ealirc_proto:join(Channels) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Leave specified channels.
+%%
+%% @see ealirc_proto:part/1
+
+-spec part(pid(), [ealirc_proto:channel()]) ->
+  ok | {error, term()}.
+
+part(Pid, Channels) ->
+  case ealirc_proto:part(Channels) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Leave specified channels.
+%%
+%% @see ealirc_proto:part/2
+
+-spec part(pid(), [ealirc_proto:channel()], string()) ->
+  ok | {error, term()}.
+
+part(Pid, Channels, Message) ->
+  case ealirc_proto:part(Channels, Message) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Set topic for specified channel.
+%%
+%% @see ealirc_proto:topic/2
+
+-spec topic(pid(), ealirc_proto:channel(), string()) ->
+  ok | {error, term()}.
+
+topic(Pid, Channel, Topic) ->
+  case ealirc_proto:topic(Channel, Topic) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Invite user to a channel.
+%%
+%% @see ealirc_proto:invite/2
+
+-spec invite(pid(), ealirc_proto:nick(), ealirc_proto:channel()) ->
+  ok | {error, term()}.
+
+invite(Pid, Nick, Channel) ->
+  case ealirc_proto:invite(Nick, Channel) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Kick users from channels.
+%%
+%% @see ealirc_proto:kick/2
+
+-spec kick(pid(), [ealirc_proto:channel()], [ealirc_proto:nick()]) ->
+  ok | {error, term()}.
+
+kick(Pid, Channels, Nicks) ->
+  case ealirc_proto:kick(Channels, Nicks) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Kick users from channels.
+%%
+%% @see ealirc_proto:kick/3
+
+-spec kick(pid(), [ealirc_proto:channel()], [ealirc_proto:nick()], string()) ->
+  ok | {error, term()}.
+
+kick(Pid, Channels, Nicks, Comment) ->
+  case ealirc_proto:kick(Channels, Nicks, Comment) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Send a message to user or channel.
+%%
+%% @see ealirc_proto:privmsg/2
+
+-spec privmsg(pid(), ealirc_proto:nick() | ealirc_proto:channel(), string()) ->
+  ok | {error, term()}.
+
+privmsg(Pid, Target, Message) ->
+  case ealirc_proto:privmsg(Target, Message) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Send a message to user or channel.
+%%
+%%   Messages sent with <i>NOTICE</i> are never getting any automated
+%%   response (e.g. delivery errors).
+%%
+%% @see privmsg/3
+
+-spec notice(pid(), ealirc_proto:nick() | ealirc_proto:channel(), string()) ->
+  ok | {error, term()}.
+
+notice(Pid, Target, Message) ->
+  case ealirc_proto:notice(Target, Message) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Send <i>ping</i> message to server.
+%%
+%% @see ealirc_proto:ping/1
+
+-spec ping(pid(), ealirc_proto:server()) ->
+  ok | {error, term()}.
+
+ping(Pid, Target) ->
+  case ealirc_proto:ping(Target) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
+
+%% @doc Send <i>pong</i> reply to server.
+%%
+%% @see ealirc_proto:pong/1
+
+-spec pong(pid(), ealirc_proto:server()) ->
+  ok | {error, term()}.
+
+pong(Pid, Responder) ->
+  case ealirc_proto:pong(Responder) of
+    {ok, Msg} -> quote(Pid, Msg);
+    {error, Reason} -> {error, Reason}
+  end.
 
 %% }}}
 %%----------------------------------------------------------

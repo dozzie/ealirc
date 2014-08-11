@@ -45,8 +45,8 @@ connect(Server, Port, Nick) ->
 init([Nick] = _Args) ->
   {ok, NickCmd} = ealirc_proto:nick(Nick),
   {ok, UserCmd} = ealirc_proto:user(Nick, none, Nick),
-  gen_ealirc:quote(NickCmd),
-  gen_ealirc:quote(UserCmd),
+  gen_ealirc:quote(self(), NickCmd),
+  gen_ealirc:quote(self(), UserCmd),
   {ok, #state{nick = Nick}}.
 
 %% @private
@@ -82,7 +82,7 @@ handle_info(_Msg, State) ->
 
 handle_message(Prefix, "PING" = _Command, Args, State = #state{nick = Nick}) ->
   {ok, PongCmd} = ealirc_proto:pong(Nick),
-  gen_ealirc:quote(PongCmd),
+  gen_ealirc:quote(self(), PongCmd),
   io:fwrite("PING(~1024p) from ~1024p~n", [Args, Prefix]),
   {noreply, State};
 
