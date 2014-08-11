@@ -119,7 +119,7 @@ encode_args([String | Rest] = _Args) ->
 decode(Line) ->
   try
     #msg{prefix = Prefix, cmd = Cmd, args = Args}
-      = decode_prefix(strip_crlf(Line)),
+      = parse_prefix(strip_crlf(Line)),
     {ok, {Prefix, string:to_upper(Cmd), Args}}
   catch
     % XXX: errors if_clause and try_clause won't show up here
@@ -136,44 +136,44 @@ decode(Line) ->
 
 %% @doc Decode command prefix and pass the line further.
 
--spec decode_prefix(string()) ->
+-spec parse_prefix(string()) ->
   #msg{}.
 
-decode_prefix(":" ++ Rest = _Line) ->
+parse_prefix(":" ++ Rest = _Line) ->
   % TODO: validate prefix (servername | nick [["!" user] "@" host]
   {Prefix, Rest1} = space_split(Rest),
-  {Cmd, Args} = decode_command(Rest1),
+  {Cmd, Args} = parse_command(Rest1),
   #msg{prefix = Prefix, cmd = Cmd, args = Args};
-decode_prefix(Line) when hd(Line) /= $  ->
-  {Cmd, Args} = decode_command(Line),
+parse_prefix(Line) when hd(Line) /= $  ->
+  {Cmd, Args} = parse_command(Line),
   #msg{prefix = none, cmd = Cmd, args = Args}.
 
 %% @doc Decode command and pass the line further.
 
--spec decode_command(string()) ->
+-spec parse_command(string()) ->
   {string(), [string()]}.
 
-decode_command([C1, C2, C3, $  | Rest] = _Line)
+parse_command([C1, C2, C3, $  | Rest] = _Line)
 when C1 >= $0, C1 =< $9, C2 >= $0, C2 =< $9, C3 >= $0, C3 =< $9 ->
   Cmd = (C1 - $0) * 100 + (C2 - $0) * 10 + (C3 - $0),
-  Args = decode_args(string:strip(Rest, left)),
+  Args = parse_args(string:strip(Rest, left)),
   {Cmd, Args};
-decode_command(Line) ->
+parse_command(Line) ->
   {Cmd, ArgsString} = space_split(Line),
-  Args = decode_args(ArgsString),
+  Args = parse_args(ArgsString),
   {Cmd, Args}.
 
 %% @doc Decode arguments.
 
--spec decode_args(string()) ->
+-spec parse_args(string()) ->
   [string()].
 
-decode_args(":" ++ Arg = _Line) ->
+parse_args(":" ++ Arg = _Line) ->
   [Arg];
-decode_args(Line) ->
+parse_args(Line) ->
   case space_split(Line) of
     {Arg, ""} -> [Arg];
-    {Arg, Rest} -> [Arg | decode_args(Rest)]
+    {Arg, Rest} -> [Arg | parse_args(Rest)]
   end.
 
 %% }}}
