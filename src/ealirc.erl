@@ -8,6 +8,7 @@
 
 -export_type([prefix/0, command/0, argument/0]).
 -export_type([nick/0, channel/0, server/0]).
+-export_type([user_mode/0, channel_mode/0]).
 
 %%%---------------------------------------------------------------------------
 
@@ -31,6 +32,19 @@
 
 %% [a-z0-9]+[a-z0-9-]*(\.[a-z0-9]+[a-z0-9-]*)* | IPv4
 -type server() :: string().
+
+%% [+-][iwoOr]
+%% a -- away (cannot be set with +a)
+%% i -- invisible
+%% w -- receives wallops
+%% r -- restricted
+%% o -- operator (chanop? IRC op?)
+%% O -- local operator
+%% s -- receives server notices (cannot be set with +s)
+-type user_mode() :: string().
+
+%% "[+-][aimnqpsrt]" | {"[+-][OovklbeI]", Argument}
+-type channel_mode() :: string() | {Flag :: string(), Argument :: string()}.
 
 %%%---------------------------------------------------------------------------
 %%% vim:ft=erlang:foldmethod=marker

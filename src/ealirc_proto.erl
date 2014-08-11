@@ -45,9 +45,8 @@
 -type channel() :: ealirc:channel().
 -type server() :: ealirc:server().
 
-% +o -i ...
--type user_mode() :: term().
--type channel_mode() :: term().
+-type user_mode() :: ealirc:user_mode().
+-type channel_mode() :: ealirc:channel_mode().
 
 -record(msg, {prefix = none, cmd, args = []}).
 
