@@ -278,15 +278,79 @@ oper(Prefix, User, Password) ->
   encode(Prefix, "OPER", [User, Password]).
 
 %% @doc Set user or channel mode.
+%%
+%%   <b>WARNING</b>: be careful when mixing modes with and without arguments.
+%%   There's a risk of passing argument to wrong mode if you incidentally
+%%   omitted argument to, for example, `"+o"' or `"+I"'.
+%%
+%% @spec mode(prefix(), nick() | channel(),
+%%            [user_mode()] | [channel_mode()]) ->
+%%   ok
 
 -spec mode(prefix(), nick(),    [user_mode()])    -> ok;
           (prefix(), channel(), [channel_mode()]) -> ok.
 
-mode(_Prefix, [T | _] = _Channel, _Modes)
+mode(Prefix, [T | _] = Channel, Modes)
 when T == $#; T == $+; T == $!; T == $& ->
-  'TODO';
-mode(_Prefix, _Nick, _Modes) ->
-  'TODO'.
+  {ModesArg, Args} = combine_channel_modes(Modes, none, [], []),
+  encode(Prefix, "MODE", [Channel, ModesArg | Args]);
+mode(Prefix, Nick, Modes) ->
+  ModesArg = combine_user_modes(Modes, none, []),
+  encode(Prefix, "MODE", [Nick, ModesArg]).
+
+%%----------------------------------------------------------
+%% combining modes into single string {{{
+
+%% @doc Combine modes specific for user into a nice string sequence.
+
+-spec combine_user_modes([string()], char() | none, iolist()) ->
+  string().
+
+combine_user_modes([] = _Modes, _O, ModeAcc) ->
+  lists:flatten(ModeAcc);
+
+%% mode operation (set/unset) the same as previous one
+combine_user_modes([[O, M] | Rest] = _Modes, O, ModeAcc)
+when (O == $+ orelse O == $-), M /= $ , M /= $+, M /= $- ->
+  combine_user_modes(Rest, O, [ModeAcc, M]);
+
+%% mode operation changed since the last time
+combine_user_modes([[O, M] | Rest] = _Modes, _OOld, ModeAcc)
+when (O == $+ orelse O == $-), M /= $ , M /= $+, M /= $- ->
+  combine_user_modes(Rest, O, [ModeAcc, [O, M]]).
+
+%% @doc Combine modes specific for channel into a nice string sequence + list
+%%   of arguments.
+
+-spec combine_channel_modes([string() | {string(), string()}], char() | none,
+                         iolist(), [string()]) ->
+  {string(), [string()]}.
+
+combine_channel_modes([] = _Modes, _O, ModeAcc, ArgsAcc) ->
+  {lists:flatten(ModeAcc), lists:reverse(ArgsAcc)};
+
+%% mode operation (set/unset) the same as previous one
+combine_channel_modes([[O, M] | Rest] = _Modes, O, ModeAcc, ArgsAcc)
+when (O == $+ orelse O == $-), M /= $ , M /= $+, M /= $- ->
+  combine_channel_modes(Rest, O, [ModeAcc, M], ArgsAcc);
+
+%% mode operation changed since the last time
+combine_channel_modes([[O, M] | Rest] = _Modes, _OOld, ModeAcc, ArgsAcc)
+when (O == $+ orelse O == $-), M /= $ , M /= $+, M /= $- ->
+  combine_channel_modes(Rest, O, [ModeAcc, [O, M]], ArgsAcc);
+
+%% mode operation (set/unset) the same as previous one
+combine_channel_modes([{[O, M], Arg} | Rest] = _Modes, O, ModeAcc, ArgsAcc)
+when (O == $+ orelse O == $-), M /= $ , M /= $+, M /= $- ->
+  combine_channel_modes(Rest, O, [ModeAcc, M], [Arg | ArgsAcc]);
+
+%% mode operation changed since the last time
+combine_channel_modes([{[O, M], Arg} | Rest] = _Modes, _OOld, ModeAcc, ArgsAcc)
+when (O == $+ orelse O == $-), M /= $ , M /= $+, M /= $- ->
+  combine_channel_modes(Rest, O, [ModeAcc, [O, M]], [Arg | ArgsAcc]).
+
+%% }}}
+%%----------------------------------------------------------
 
 %% @doc Service registration message.
 
