@@ -326,8 +326,8 @@ parse_prefix_nick_or_server([C | _Rest] = Prefix, Acc) when C == $!; C == $@ ->
   parse_prefix_nick(Prefix, Acc);
 
 %% this surely is host, as nicks can't contain period
-parse_prefix_nick_or_server("." ++ Rest = _Prefix, Acc) ->
-  {server, lists:reverse(Acc) ++ Rest};
+parse_prefix_nick_or_server("." ++ _Rest = Prefix, Acc) ->
+  {server, lists:reverse(Acc) ++ Prefix};
 
 %% still could be nick or server, but end of prefix occurred => it's a nick
 parse_prefix_nick_or_server([] = _Prefix, Acc) ->
