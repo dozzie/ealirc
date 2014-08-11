@@ -5,8 +5,10 @@
 %%%   Usage (to be simplified):
 %%%   ```
 %%%   {ok, Pid} = example_client:connect("chat.example.net", 6667, "mynick"),
-%%%   {ok, JoinCmd} = ealirc_proto:join(["#atled"]),
-%%%   gen_ealirc:quote(Pid, JoinCmd).
+%%%   gen_ealirc:join(Pid, ["#atled"]),
+%%%   % sending raw commands
+%%%   {ok, Cmd} = ealirc_proto:privmsg("#atled", "a message"),
+%%%   gen_ealirc:quote(Pid, Cmd).
 %%%   '''
 %%% @end
 %%%---------------------------------------------------------------------------
@@ -83,7 +85,12 @@ handle_info(_Msg, State) ->
 handle_message(Prefix, "PING" = _Command, Args, State = #state{nick = Nick}) ->
   {ok, PongCmd} = ealirc_proto:pong(Nick),
   gen_ealirc:quote(self(), PongCmd),
-  io:fwrite("PING(~1024p) from ~1024p~n", [Args, Prefix]),
+  case {Prefix,Args} of
+    {none,[From | _]} ->
+      io:fwrite("PING from ~s~n", [From]);
+    {_,[From | _]} ->
+      io:fwrite("PING from ~s (~p)~n", [From, Prefix])
+  end,
   {noreply, State};
 
 handle_message(Prefix, Command, Args, State) ->
