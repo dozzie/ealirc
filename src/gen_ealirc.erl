@@ -230,7 +230,7 @@ quote(Line) ->
 %%   The line will be terminated with CR+LF automatically. Don't include it.
 
 quote(Pid, Line) ->
-  cast(Pid, {gen_ealirc, Line}).
+  cast(Pid, {'$gen_irc_quote', Line}).
 
 %% }}}
 %%----------------------------------------------------------
@@ -315,7 +315,7 @@ handle_call(Request, From, State = #state{mod = Mod, state = MState}) ->
 %% @doc Handle {@link gen_server:cast/2}.
 
 %% generic command
-handle_cast({gen_ealirc, CommandLine} = _Request,
+handle_cast({'$gen_irc_quote', CommandLine} = _Request,
             State = #state{sock = Sock}) ->
   case gen_tcp:send(Sock, [CommandLine, "\r\n"]) of
     ok ->
