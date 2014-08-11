@@ -13,7 +13,13 @@
 %%%---------------------------------------------------------------------------
 
 %% can't contain space
--type prefix() :: string() | none.
+-type prefix() :: server_prefix() | user_prefix() | none.
+
+-type server_prefix() :: {server, string()}.
+-type user_prefix() :: {user,
+                         Nick :: nick(),
+                         User :: string() | undefined,
+                         Host :: string() | undefined}.
 
 %% [a-zA-Z]+ or [0-9][0-9][0-9]
 -type command() :: string() | integer().

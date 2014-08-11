@@ -12,7 +12,8 @@
 
 %% line processing
 -export([encode/2, encode/3, decode/1]).
--export([parse/1]).
+-export([encode_prefix/1, decode_prefix/1]).
+-export([server_prefix/1, user_prefix/1, user_prefix/2, user_prefix/3]).
 %% RFC 2812 messages
 %% http://tools.ietf.org/rfc/rfc2812.txt
 -export([pass/2, nick/2, user/4, user/5, oper/3, mode/3, service/5, service/7]).
@@ -47,6 +48,9 @@
 
 -type user_mode() :: ealirc:user_mode().
 -type channel_mode() :: ealirc:channel_mode().
+
+-type server_prefix() :: ealirc:server_prefix().
+-type user_prefix() :: ealirc:user_prefix().
 
 -record(msg, {prefix = none, cmd, args = []}).
 
@@ -215,13 +219,76 @@ space_split(String) ->
 
 %%%---------------------------------------------------------------------------
 
-%% @doc Decode parsed message to one of the requests.
-%%   Decoding includes checking if the message has appropriate arguments.
+%% @doc Encode prefix tuple into string suitable to prepend to IRC message.
+%%
+%%   Typically you want to call {@link user_prefix/3} or
+%%   {@link server_prefix/1}.
+%%
+%% @see user_prefix/1
+%% @see user_prefix/2
+%% @see user_prefix/3
+%% @see server_prefix/1
 
--spec parse({prefix(), command(), [argument()]}) ->
-  {ok, term()} | {error, term()}.
+-spec encode_prefix(server_prefix() | user_prefix()) ->
+  string().
 
-parse({_Prefix, _Cmd, _Args} = _Message) ->
+encode_prefix({server, Server} = _Prefix) ->
+  Server;
+encode_prefix({user, Nick, undefined, undefined} = _Prefix) ->
+  Nick;
+encode_prefix({user, Nick, undefined, Host} = _Prefix) ->
+  Nick ++ "@" ++ Host;
+encode_prefix({user, Nick, User, Host} = _Prefix) ->
+  Nick ++ "!" ++ User ++ "@" ++ Host.
+
+%% @doc Encode server prefix for IRC message.
+
+-spec server_prefix(server()) ->
+  string().
+
+server_prefix(Server) ->
+  encode_prefix({server, Server}).
+
+%% @doc Encode user prefix for IRC message.
+
+-spec user_prefix(nick()) ->
+  string().
+
+user_prefix(Nick) ->
+  encode_prefix({user, Nick, undefined, undefined}).
+
+%% @doc Encode user prefix for IRC message.
+
+-spec user_prefix(nick(), string()) ->
+  string().
+
+user_prefix(Nick, Host) ->
+  encode_prefix({user, Nick, undefined, Host}).
+
+%% @doc Encode user prefix for IRC message.
+%%
+%%   `User' is a username local to `Host'.
+
+-spec user_prefix(nick(), string(), string()) ->
+  string().
+
+user_prefix(Nick, User, Host) ->
+  encode_prefix({user, Nick, User, Host}).
+
+%% @doc Decode IRC message prefix.
+%%
+%%   There are four forms of the prefixes:
+%%   <ul>
+%%     <li>`servername' (contains `"."')</li>
+%%     <li>`nick'</li>
+%%     <li>`nick@host'</li>
+%%     <li>`nick!user@host'</li>
+%%   </ul>
+
+-spec decode_prefix(string()) ->
+  server_prefix() | user_prefix().
+
+decode_prefix(_Prefix) ->
   'TODO'.
 
 %%%---------------------------------------------------------------------------
