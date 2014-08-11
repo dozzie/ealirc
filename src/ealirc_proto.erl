@@ -14,6 +14,7 @@
 %%%   Prefix = ealirc_proto:user_prefix("Trillian", "irc-shell.example.net"),
 %%%   {ok, Message} = ealirc_proto:away("went to lunch"),
 %%%   gen_tcp:send(IRC, [":", Prefix, " ", Message]).
+%%%   % ":Trillian@irc-shell.example.net AWAY :went to lunch"
 %%%   '''
 %%% @end
 %%%---------------------------------------------------------------------------
@@ -244,6 +245,8 @@ encode_prefix({user, Nick, User, Host} = _Prefix) ->
   Nick ++ "!" ++ User ++ "@" ++ Host.
 
 %% @doc Encode server prefix for IRC message.
+%%   Returned string <i>does not</i> start with `":"' nor ends with space, you
+%%   need to add it by yourself.
 
 -spec server_prefix(server()) ->
   string().
@@ -252,6 +255,8 @@ server_prefix(Server) ->
   encode_prefix({server, Server}).
 
 %% @doc Encode user prefix for IRC message.
+%%   Returned string <i>does not</i> start with `":"' nor ends with space, you
+%%   need to add it by yourself.
 
 -spec user_prefix(nick()) ->
   string().
@@ -260,18 +265,22 @@ user_prefix(Nick) ->
   encode_prefix({user, Nick, undefined, undefined}).
 
 %% @doc Encode user prefix for IRC message.
+%%   Returned string <i>does not</i> start with `":"' nor ends with space, you
+%%   need to add it by yourself.
 
--spec user_prefix(nick(), string()) ->
+-spec user_prefix(nick(), string() | undefined) ->
   string().
 
 user_prefix(Nick, Host) ->
   encode_prefix({user, Nick, undefined, Host}).
 
 %% @doc Encode user prefix for IRC message.
+%%   Returned string <i>does not</i> start with `":"' nor ends with space, you
+%%   need to add it by yourself.
 %%
 %%   `User' is a username local to `Host'.
 
--spec user_prefix(nick(), string(), string()) ->
+-spec user_prefix(nick(), string() | undefined, string() | undefined) ->
   string().
 
 user_prefix(Nick, User, Host) ->
