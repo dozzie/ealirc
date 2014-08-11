@@ -279,9 +279,15 @@ oper(Prefix, User, Password) ->
 
 %% @doc Set user or channel mode.
 %%
-%%   <b>WARNING</b>: be careful when mixing modes with and without arguments.
-%%   There's a risk of passing argument to wrong mode if you incidentally
-%%   omitted argument to, for example, `"+o"' or `"+I"'.
+%%   <b>WARNING</b>: be careful when mixing modes with and without arguments
+%%   (channel modes only). There's a risk of passing argument to wrong mode if
+%%   you incidentally omitted argument to, for example, `"+o"' or `"+I"'.
+%%
+%%   Usage examples:
+%%   ```
+%%   ealirc_proto:mode(none, "WiZ", ["+i", "-w"]).
+%%   ealirc_proto:mode(none, "#42", ["+m", {"+k", "secret"}, {"-o", "Trillian"}]).
+%%   '''
 %%
 %% @spec mode(prefix(), nick() | channel(),
 %%            [user_mode()] | [channel_mode()]) ->
