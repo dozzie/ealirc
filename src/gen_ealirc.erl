@@ -2,6 +2,10 @@
 %%% @doc
 %%%   IRC client behaviour.
 %%%
+%%%   <b>NOTE</b>: Any IRC commands (e.g. <i>JOIN</i>) sent to `self()' within
+%%%   callbacks are processed <i>after</i> the callback has returned. This
+%%%   could be a limitation.
+%%%
 %%%   == Expected callbacks ==
 %%%
 %%%   The callbacks are the same as for {@link gen_server} behaviour, with
