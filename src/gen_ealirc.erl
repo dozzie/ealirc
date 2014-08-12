@@ -4,7 +4,14 @@
 %%%
 %%%   <b>NOTE</b>: Any IRC commands (e.g. <i>JOIN</i>) sent to `self()' within
 %%%   callbacks are processed <i>after</i> the callback has returned. This
-%%%   could be a limitation.
+%%%   could be a limitation. To overcome this, you can encode a state machine
+%%%   (could be somewhat difficult in some cases) or spawn a process that will
+%%%   be talking through {@link gen_ealirc}.
+%%%
+%%%   <b>NOTE</b>: When using timeouts (`{noreply,State,Timeout}' and similar
+%%%   returned from callbacks), your timeout could be reset on any incoming
+%%%   IRC command to be sent to server. Don't use it for precise time
+%%%   measurements.
 %%%
 %%%   == Expected callbacks ==
 %%%
@@ -44,12 +51,11 @@
 %% {@link gen_server} recognized names
 -type process_name() :: {local, atom()} | {global, term()} | {via, term()}.
 
--record(state, {sock, mod, state}).
+-record(state, {sock, mod, state, timeout = infinity}).
 
 %%%---------------------------------------------------------------------------
 %%% public API
 
-%% @TODO message() (send an IRC message, prefixed or not)
 %% @TODO option for (not) closing the socket on stop
 %% @TODO option for automatically handling <i>PING</i> messages
 %% @TODO connect/6, connect_link/6 (registering names)
@@ -517,7 +523,7 @@ init({Module, ModArgs, InitState} = _Args) ->
     {ok, ModState, hibernate} ->
       {ok, InitState#state{state = ModState}, hibernate};
     {ok, ModState, Timeout} ->
-      {ok, InitState#state{state = ModState}, Timeout};
+      {ok, InitState#state{state = ModState, timeout = Timeout}, Timeout};
     Any ->
       Any
   end.
@@ -540,17 +546,17 @@ terminate(Reason, _State = #state{sock = Sock, mod = Mod, state = MState}) ->
 handle_call(Request, From, State = #state{mod = Mod, state = MState}) ->
   case Mod:handle_call(Request, From, MState) of
     {reply, Reply, NewMState} ->
-      {reply, Reply, State#state{state = NewMState}};
+      {reply, Reply, State#state{state = NewMState, timeout = infinity}};
     {reply, Reply, NewMState, hibernate} ->
-      {reply, Reply, State#state{state = NewMState}, hibernate};
+      {reply, Reply, State#state{state = NewMState, timeout = infinity}, hibernate};
     {reply, Reply, NewMState, Timeout} ->
-      {reply, Reply, State#state{state = NewMState}, Timeout};
+      {reply, Reply, State#state{state = NewMState, timeout = Timeout}, Timeout};
     {noreply, NewMState} ->
-      {noreply, State#state{state = NewMState}};
+      {noreply, State#state{state = NewMState, timeout = infinity}};
     {noreply, NewMState, hibernate} ->
-      {noreply, State#state{state = NewMState}, hibernate};
+      {noreply, State#state{state = NewMState, timeout = infinity}, hibernate};
     {noreply, NewMState, Timeout} ->
-      {noreply, State#state{state = NewMState}, Timeout};
+      {noreply, State#state{state = NewMState, timeout = Timeout}, Timeout};
     {stop, Reason, Reply, NewMState} ->
       {stop, Reason, Reply, State#state{state = NewMState}};
     {stop, Reason, NewMState} ->
@@ -565,7 +571,14 @@ handle_cast({'$gen_irc_quote', CommandLine} = _Request,
             State = #state{sock = Sock}) ->
   case gen_tcp:send(Sock, [CommandLine, "\r\n"]) of
     ok ->
-      {noreply, State}; % FIXME: and what if there was a timeout set?
+      % FIXME: this could starve implementor when something sends IRC commands
+      % more often than `Timeout'
+      case State of
+        #state{timeout = infinity} ->
+          {noreply, State};
+        #state{timeout = Timeout} when is_integer(Timeout) ->
+          {noreply, State, Timeout}
+      end;
     {error, Reason} ->
       {stop, Reason, State}
   end;
@@ -573,11 +586,11 @@ handle_cast({'$gen_irc_quote', CommandLine} = _Request,
 handle_cast(Request, State = #state{mod = Mod, state = MState}) ->
   case Mod:handle_cast(Request, MState) of
     {noreply, NewMState} ->
-      {noreply, State#state{state = NewMState}};
+      {noreply, State#state{state = NewMState, timeout = infinity}};
     {noreply, NewMState, hibernate} ->
-      {noreply, State#state{state = NewMState}, hibernate};
+      {noreply, State#state{state = NewMState, timeout = infinity}, hibernate};
     {noreply, NewMState, Timeout} ->
-      {noreply, State#state{state = NewMState}, Timeout};
+      {noreply, State#state{state = NewMState, timeout = Timeout}, Timeout};
     {stop, Reason, NewMState} ->
       {stop, Reason, State#state{state = NewMState}}
   end.
@@ -592,11 +605,11 @@ handle_info({tcp, Sock, Line} = _Msg,
     {ok, {Prefix, Command, Args}} ->
       case Mod:handle_message(Prefix, Command, Args, MState) of
         {noreply, NewMState} ->
-          {noreply, State#state{state = NewMState}};
+          {noreply, State#state{state = NewMState, timeout = infinity}};
         {noreply, NewMState, hibernate} ->
-          {noreply, State#state{state = NewMState}, hibernate};
+          {noreply, State#state{state = NewMState, timeout = infinity}, hibernate};
         {noreply, NewMState, Timeout} ->
-          {noreply, State#state{state = NewMState}, Timeout};
+          {noreply, State#state{state = NewMState, timeout = Timeout}, Timeout};
         {stop, Reason, NewMState} ->
           {stop, Reason, State#state{state = NewMState}}
       end;
@@ -621,11 +634,11 @@ handle_info({tcp_error, Sock, Reason} = _Msg, State = #state{sock = Sock}) ->
 handle_info(Msg, State = #state{mod = Mod, state = MState}) ->
   case Mod:handle_info(Msg, MState) of
     {noreply, NewMState} ->
-      {noreply, State#state{state = NewMState}};
+      {noreply, State#state{state = NewMState, timeout = infinity}};
     {noreply, NewMState, hibernate} ->
-      {noreply, State#state{state = NewMState}, hibernate};
+      {noreply, State#state{state = NewMState, timeout = infinity}, hibernate};
     {noreply, NewMState, Timeout} ->
-      {noreply, State#state{state = NewMState}, Timeout};
+      {noreply, State#state{state = NewMState, timeout = Timeout}, Timeout};
     {stop, Reason, NewMState} ->
       {stop, Reason, State#state{state = NewMState}}
   end.
