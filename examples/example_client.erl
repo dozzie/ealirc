@@ -45,10 +45,8 @@ connect(Server, Port, Nick) ->
 %% @doc Initialize {@link gen_ealirc} state.
 
 init([Nick] = _Args) ->
-  {ok, NickCmd} = ealirc_proto:nick(Nick),
-  {ok, UserCmd} = ealirc_proto:user(Nick, none, Nick),
-  gen_ealirc:quote(self(), NickCmd),
-  gen_ealirc:quote(self(), UserCmd),
+  gen_ealirc:nick(self(), Nick),
+  gen_ealirc:user(Nick, none, Nick),
   {ok, #state{nick = Nick}}.
 
 %% @private
