@@ -93,6 +93,12 @@ handle_message(Prefix, "PING" = _Command, Args, State = #state{nick = Nick}) ->
   end,
   {noreply, State};
 
+handle_message({user, Nick, _, _} = _Prefix,
+               "NICK" = _Command, [NewNick] = _Args,
+               State = #state{nick = Nick}) ->
+  io:fwrite("Changing nickname from ~s to ~s~n", [Nick, NewNick]),
+  {noreply, State#state{nick = NewNick}};
+
 handle_message(Prefix, Command, Args, State) ->
   io:fwrite("[~p] ~p ~1024p~n", [Prefix, Command, Args]),
   {noreply, State}.
