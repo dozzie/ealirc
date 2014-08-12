@@ -50,7 +50,8 @@
 %%% public API
 
 %% @TODO message() (send an IRC message, prefixed or not)
-%% @TODO option for not closing the socket on stop
+%% @TODO option for (not) closing the socket on stop
+%% @TODO option for automatically handling <i>PING</i> messages
 %% @TODO connect/6, connect_link/6 (registering names)
 %% @TODO channel handlers
 
