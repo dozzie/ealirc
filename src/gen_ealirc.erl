@@ -68,6 +68,9 @@
 %%
 %%   `Options' is a proplist suitable for {@link gen_server:start/3}.
 %%
+%%   <b>NOTE</b>: The function has to be called from the process owning the
+%%   `Socket'.
+%%
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
 
@@ -91,6 +94,9 @@ start(Module, Args, Socket, Options) ->
 %%
 %%   `Options' is a proplist suitable for {@link gen_server:start/4}.
 %%
+%%   <b>NOTE</b>: The function has to be called from the process owning the
+%%   `Socket'.
+%%
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
 
@@ -111,6 +117,9 @@ start(ServerName, Module, Args, Socket, Options) ->
 %% @doc Start (linked) process using already prepared socket.
 %%
 %%   `Options' is a proplist suitable for {@link gen_server:start_link/4}.
+%%
+%%   <b>NOTE</b>: The function has to be called from the process owning the
+%%   `Socket'.
 %%
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
@@ -134,6 +143,9 @@ start_link(Module, Args, Socket, Options) ->
 %%   `ServerName' is the same as for {@link gen_server:start_link/4}.
 %%
 %%   `Options' is a proplist suitable for {@link gen_server:start_link/4}.
+%%
+%%   <b>NOTE</b>: The function has to be called from the process owning the
+%%   `Socket'.
 %%
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
