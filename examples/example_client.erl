@@ -46,7 +46,7 @@ connect(Server, Port, Nick) ->
 
 init([Nick] = _Args) ->
   gen_ealirc:nick(self(), Nick),
-  gen_ealirc:user(Nick, none, Nick),
+  gen_ealirc:user(self(), Nick, none, Nick),
   {ok, #state{nick = Nick}}.
 
 %% @private
@@ -85,20 +85,20 @@ handle_message(Prefix, "PING" = _Command, Args, State = #state{nick = Nick}) ->
   gen_ealirc:quote(self(), PongCmd),
   case {Prefix,Args} of
     {none,[From | _]} ->
-      io:fwrite("PING from ~s~n", [From]);
+      io:fwrite("<~s> PING from ~s~n", [Nick, From]);
     {_,[From | _]} ->
-      io:fwrite("PING from ~s (~p)~n", [From, Prefix])
+      io:fwrite("<~s> PING from ~s (~p)~n", [Nick, From, Prefix])
   end,
   {noreply, State};
 
 handle_message({user, Nick, _, _} = _Prefix,
                "NICK" = _Command, [NewNick] = _Args,
                State = #state{nick = Nick}) ->
-  io:fwrite("Changing nickname from ~s to ~s~n", [Nick, NewNick]),
+  io:fwrite("<~s> Changing nickname from ~s to ~s~n", [Nick, Nick, NewNick]),
   {noreply, State#state{nick = NewNick}};
 
 handle_message(Prefix, Command, Args, State) ->
-  io:fwrite("[~p] ~p ~1024p~n", [Prefix, Command, Args]),
+  io:fwrite("<~s> [~p] ~p ~1024p~n", [Nick, Prefix, Command, Args]),
   {noreply, State}.
 
 %% }}}
