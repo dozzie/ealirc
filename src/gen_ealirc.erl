@@ -412,6 +412,10 @@ quit(Pid, Message) ->
                   | 0) ->
   ok | {error, term()}.
 
+% just ignore empty channel list
+join(_Pid, [] = _Channels) ->
+  ok;
+
 join(Pid, Channels) ->
   case ealirc_proto:join(Channels) of
     {ok, Msg} -> quote(Pid, Msg);
