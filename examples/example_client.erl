@@ -80,7 +80,10 @@ handle_info(_Msg, State) ->
 %% @private
 %% @doc Handle incoming IRC messages.
 
-handle_message(Prefix, "PING" = _Command, Args, State = #state{nick = Nick}) ->
+handle_message(Prefix,
+               "PING" = _Command,
+               Args,
+               State  = #state{nick = Nick}) ->
   {ok, PongCmd} = ealirc_proto:pong(Nick),
   gen_ealirc:quote(self(), PongCmd),
   case {Prefix,Args} of
@@ -92,10 +95,32 @@ handle_message(Prefix, "PING" = _Command, Args, State = #state{nick = Nick}) ->
   {noreply, State};
 
 handle_message({user, Nick, _, _} = _Prefix,
-               "NICK" = _Command, [NewNick] = _Args,
-               State = #state{nick = Nick}) ->
+               "NICK"             = _Command,
+               [NewNick]          = _Args,
+               State              = #state{nick = Nick}) ->
   io:fwrite("<~s> Changing nickname from ~s to ~s~n", [Nick, Nick, NewNick]),
   {noreply, State#state{nick = NewNick}};
+
+handle_message({user, Nick, _, _} = _Prefix,
+               "PRIVMSG"          = _Command,
+               [MsgTarget, "!" ++ Request] = _Args,
+               State) ->
+  [ReqCmd | _] = string:tokens(Request, " "),
+  Reply = "sorry, command " ++ ReqCmd ++ " is not implemented yet",
+  case MsgTarget of
+    "#" ++ _ -> % other channel indicators: "+", "!", "&"
+      gen_ealirc:privmsg(self(), MsgTarget, Nick ++ ": " ++ Reply);
+    _ ->
+      gen_ealirc:privmsg(self(), Nick, Reply)
+  end,
+  {noreply, State};
+
+handle_message({user, Nick, _, _} = _Prefix,
+               "MODE"             = _Command,
+               [Channel, "+o", SelfNick] = _Args,
+               State              = #state{nick = SelfNick}) ->
+  gen_ealirc:privmsg(self(), Channel, [Nick ++ ": thank you"]),
+  {noreply, State};
 
 handle_message(Prefix, Command, Args, State) ->
   io:fwrite("<~s> [~p] ~p ~1024p~n", [Nick, Prefix, Command, Args]),

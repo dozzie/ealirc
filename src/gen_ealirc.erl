@@ -285,8 +285,8 @@ nick(Pid, Nick) ->
 %%
 %% @see ealirc_proto:user/3
 
--spec user(pid(), ealirc_proto:nick(), none | invisible | wallops | invisible_wallops,
-           string()) ->
+-spec user(pid(), ealirc_proto:nick(),
+           none | invisible | wallops | invisible_wallops, string()) ->
   ok | {error, term()}.
 
 user(Pid, User, Mode, RealName) ->
@@ -353,8 +353,8 @@ quit(Pid, Message) ->
 %% @see ealirc_proto:join/1
 
 -spec join(pid(), [ealirc_proto:channel()]
-           | [{ealirc_proto:channel(), string()}]
-           | 0) ->
+                  | [{ealirc_proto:channel(), string()}]
+                  | 0) ->
   ok | {error, term()}.
 
 join(Pid, Channels) ->
