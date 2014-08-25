@@ -27,8 +27,8 @@
 -behaviour(gen_server).
 
 %%% public API
--export([start/4, start/5, start_link/4, start_link/5]). % start
--export([connect/5, connect_link/5]). % connect+start
+-export([start/4, start/5, start_link/4, start_link/5]).
+-export([connect/5, connect/6, connect_link/5, connect_link/6]).
 -export([call/2, call/3, cast/2]).
 -export([quote/2]). % send a message to IRC server
 -export([nick/2, user/4]).
@@ -58,7 +58,6 @@
 
 %% @TODO option for (not) closing the socket on stop
 %% @TODO option for automatically handling <i>PING</i> messages
-%% @TODO connect/6, connect_link/6 (registering names)
 %% @TODO channel handlers
 
 %%----------------------------------------------------------
@@ -186,6 +185,10 @@ post_start(_State = #state{sock = Socket}, Child) ->
 %% connect() {{{
 
 %% @doc Connect to specified IRC server.
+%%
+%%   `ServerName' is the same as for {@link gen_server:start/4}.
+%%
+%%   `Options' is a proplist suitable for {@link gen_server:start/4}.
 
 -spec connect(inet:hostname() | inet:ip_address(), integer(),
               module(), term(), list()) ->
@@ -205,7 +208,35 @@ connect(Server, Port, Module, Args, Options) ->
       {error, Reason}
   end.
 
+%% @doc Connect to specified IRC server.
+%%
+%%   `ServerName' is the same as for {@link gen_server:start/4}.
+%%
+%%   `Options' is a proplist suitable for {@link gen_server:start/4}.
+
+-spec connect(inet:hostname() | inet:ip_address(), integer(),
+              process_name(), module(), term(), list()) ->
+  {ok, pid()} | ignore | {error, term()}.
+
+connect(Server, Port, ServerName, Module, Args, Options) ->
+  case gen_tcp:connect(Server, Port, [{active, false}]) of
+    {ok, Sock} ->
+      case start(ServerName, Module, Args, Sock, Options) of
+        {ok, Pid} ->
+          {ok, Pid};
+        {error, Reason} ->
+          gen_tcp:close(Sock),
+          {error, Reason}
+      end;
+    {error, Reason} ->
+      {error, Reason}
+  end.
+
 %% @doc Connect (and link the connection handler) to specified IRC server.
+%%
+%%   `ServerName' is the same as for {@link gen_server:start/4}.
+%%
+%%   `Options' is a proplist suitable for {@link gen_server:start/4}.
 
 -spec connect_link(inet:hostname() | inet:ip_address(), integer(),
                    module(), term(), list()) ->
@@ -215,6 +246,30 @@ connect_link(Server, Port, Module, Args, Options) ->
   case gen_tcp:connect(Server, Port, [{active, false}]) of
     {ok, Sock} ->
       case start_link(Module, Args, Sock, Options) of
+        {ok, Pid} ->
+          {ok, Pid};
+        {error, Reason} ->
+          gen_tcp:close(Sock),
+          {error, Reason}
+      end;
+    {error, Reason} ->
+      {error, Reason}
+  end.
+
+%% @doc Connect (and link the connection handler) to specified IRC server.
+%%
+%%   `ServerName' is the same as for {@link gen_server:start/4}.
+%%
+%%   `Options' is a proplist suitable for {@link gen_server:start/4}.
+
+-spec connect_link(inet:hostname() | inet:ip_address(), integer(),
+                   process_name(), module(), term(), list()) ->
+  {ok, pid()} | ignore | {error, term()}.
+
+connect_link(Server, Port, ServerName, Module, Args, Options) ->
+  case gen_tcp:connect(Server, Port, [{active, false}]) of
+    {ok, Sock} ->
+      case start_link(ServerName, Module, Args, Sock, Options) of
         {ok, Pid} ->
           {ok, Pid};
         {error, Reason} ->
