@@ -122,7 +122,7 @@ handle_message({user, Nick, _, _} = _Prefix,
   gen_ealirc:privmsg(self(), Channel, [Nick ++ ": thank you"]),
   {noreply, State};
 
-handle_message(Prefix, Command, Args, State) ->
+handle_message(Prefix, Command, Args, State = #state{nick = Nick}) ->
   io:fwrite("<~s> [~p] ~p ~1024p~n", [Nick, Prefix, Command, Args]),
   {noreply, State}.
 
