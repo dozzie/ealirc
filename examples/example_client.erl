@@ -33,7 +33,7 @@
 %%% public API
 
 connect(Server, Port, Nick) ->
-  gen_ealirc:connect(Server, Port, ?MODULE, [Nick], []).
+  gen_ealirc:start(?MODULE, [Nick], {Server, Port}, []).
 
 %%%---------------------------------------------------------------------------
 %%% gen_ealirc callbacks

@@ -28,7 +28,6 @@
 
 %%% public API
 -export([start/4, start/5, start_link/4, start_link/5]).
--export([connect/5, connect/6, connect_link/5, connect_link/6]).
 -export([call/2, call/3, cast/2]).
 -export([quote/2]). % send a message to IRC server
 -export([nick/2, user/4]).
@@ -51,7 +50,14 @@
 %% {@link gen_server} recognized names
 -type process_name() :: {local, atom()} | {global, term()} | {via, term()}.
 
+%% IRC server address
+-type server_address() :: {Host :: inet:hostname() | inet:ip_address(),
+                            Port :: integer()}.
+
 -record(state, {sock, mod, state, timeout = infinity}).
+
+%% options required for TCP connection
+-define(TCP_OPTIONS, [list, {packet, line}, {packet_size, 512}]).
 
 %%%---------------------------------------------------------------------------
 %%% public API
@@ -73,7 +79,7 @@
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
 
--spec start(module(), term(), gen_tcp:socket(), list()) ->
+-spec start(module(), term(), gen_tcp:socket() | server_address(), list()) ->
   {ok, pid()} | ignore | {error, term()}.
 
 start(Module, Args, Socket, Options) ->
@@ -99,7 +105,8 @@ start(Module, Args, Socket, Options) ->
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
 
--spec start(process_name(), module(), term(), gen_tcp:socket(), list()) ->
+-spec start(process_name(), module(), term(),
+            gen_tcp:socket() | server_address(), list()) ->
   {ok, pid()} | ignore | {error, term()}.
 
 start(ServerName, Module, Args, Socket, Options) ->
@@ -123,7 +130,8 @@ start(ServerName, Module, Args, Socket, Options) ->
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
 
--spec start_link(module(), term(), gen_tcp:socket(), list()) ->
+-spec start_link(module(), term(),
+                 gen_tcp:socket() | server_address(), list()) ->
   {ok, pid()} | ignore | {error, term()}.
 
 start_link(Module, Args, Socket, Options) ->
@@ -149,7 +157,8 @@ start_link(Module, Args, Socket, Options) ->
 %%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
 %%   caller's responsibility.
 
--spec start_link(process_name(), module(), term(), gen_tcp:socket(), list()) ->
+-spec start_link(process_name(), module(), term(),
+                 gen_tcp:socket() | server_address(), list()) ->
   {ok, pid()} | ignore | {error, term()}.
 
 start_link(ServerName, Module, Args, Socket, Options) ->
@@ -165,120 +174,23 @@ start_link(ServerName, Module, Args, Socket, Options) ->
 
 %% pre and post start {{{
 
-pre_start(Socket, Module) ->
-  ok = inet:setopts(Socket, [
-    list,
-    {packet, line}, {packet_size, 512},
-    {active, false} % for now
-  ]),
+pre_start({_Host, _Port} = Socket, Module) ->
+  #state{sock = Socket, mod = Module};
+
+pre_start(Socket, Module) when is_port(Socket) ->
+  % set required options for the socket (for now make it passive)
+  ok = inet:setopts(Socket, [{active, false} | ?TCP_OPTIONS]),
   #state{sock = Socket, mod = Module}.
 
-post_start(_State = #state{sock = Socket}, Child) ->
+post_start(_State = #state{sock = {_Host, _Port}}, _Child) ->
+  ok;
+
+post_start(_State = #state{sock = Socket}, Child) when is_port(Socket) ->
   gen_tcp:controlling_process(Socket, Child),
   ok = inet:setopts(Socket, [{active, true}]),
   ok.
 
 %% }}}
-
-%% }}}
-%%----------------------------------------------------------
-%% connect() {{{
-
-%% @doc Connect to specified IRC server.
-%%
-%%   `ServerName' is the same as for {@link gen_server:start/4}.
-%%
-%%   `Options' is a proplist suitable for {@link gen_server:start/4}.
-
--spec connect(inet:hostname() | inet:ip_address(), integer(),
-              module(), term(), list()) ->
-  {ok, pid()} | ignore | {error, term()}.
-
-connect(Server, Port, Module, Args, Options) ->
-  case gen_tcp:connect(Server, Port, [{active, false}]) of
-    {ok, Sock} ->
-      case start(Module, Args, Sock, Options) of
-        {ok, Pid} ->
-          {ok, Pid};
-        {error, Reason} ->
-          gen_tcp:close(Sock),
-          {error, Reason}
-      end;
-    {error, Reason} ->
-      {error, Reason}
-  end.
-
-%% @doc Connect to specified IRC server.
-%%
-%%   `ServerName' is the same as for {@link gen_server:start/4}.
-%%
-%%   `Options' is a proplist suitable for {@link gen_server:start/4}.
-
--spec connect(inet:hostname() | inet:ip_address(), integer(),
-              process_name(), module(), term(), list()) ->
-  {ok, pid()} | ignore | {error, term()}.
-
-connect(Server, Port, ServerName, Module, Args, Options) ->
-  case gen_tcp:connect(Server, Port, [{active, false}]) of
-    {ok, Sock} ->
-      case start(ServerName, Module, Args, Sock, Options) of
-        {ok, Pid} ->
-          {ok, Pid};
-        {error, Reason} ->
-          gen_tcp:close(Sock),
-          {error, Reason}
-      end;
-    {error, Reason} ->
-      {error, Reason}
-  end.
-
-%% @doc Connect (and link the connection handler) to specified IRC server.
-%%
-%%   `ServerName' is the same as for {@link gen_server:start/4}.
-%%
-%%   `Options' is a proplist suitable for {@link gen_server:start/4}.
-
--spec connect_link(inet:hostname() | inet:ip_address(), integer(),
-                   module(), term(), list()) ->
-  {ok, pid()} | ignore | {error, term()}.
-
-connect_link(Server, Port, Module, Args, Options) ->
-  case gen_tcp:connect(Server, Port, [{active, false}]) of
-    {ok, Sock} ->
-      case start_link(Module, Args, Sock, Options) of
-        {ok, Pid} ->
-          {ok, Pid};
-        {error, Reason} ->
-          gen_tcp:close(Sock),
-          {error, Reason}
-      end;
-    {error, Reason} ->
-      {error, Reason}
-  end.
-
-%% @doc Connect (and link the connection handler) to specified IRC server.
-%%
-%%   `ServerName' is the same as for {@link gen_server:start/4}.
-%%
-%%   `Options' is a proplist suitable for {@link gen_server:start/4}.
-
--spec connect_link(inet:hostname() | inet:ip_address(), integer(),
-                   process_name(), module(), term(), list()) ->
-  {ok, pid()} | ignore | {error, term()}.
-
-connect_link(Server, Port, ServerName, Module, Args, Options) ->
-  case gen_tcp:connect(Server, Port, [{active, false}]) of
-    {ok, Sock} ->
-      case start_link(ServerName, Module, Args, Sock, Options) of
-        {ok, Pid} ->
-          {ok, Pid};
-        {error, Reason} ->
-          gen_tcp:close(Sock),
-          {error, Reason}
-      end;
-    {error, Reason} ->
-      {error, Reason}
-  end.
 
 %% }}}
 %%----------------------------------------------------------
@@ -587,7 +499,16 @@ behaviour_info(_Any) ->
 %% @private
 %% @doc Initialize {@link gen_server} state.
 
-init({Module, ModArgs, InitState} = _Args) ->
+init({Module, ModArgs, InitState = #state{sock = {Host, Port}} } = _Args) ->
+  case gen_tcp:connect(Host, Port, [{active, true} | ?TCP_OPTIONS]) of
+    {ok, Socket} ->
+      init({Module, ModArgs, InitState#state{sock = Socket}});
+    {error, Reason} ->
+      {stop, Reason}
+  end;
+
+init({Module, ModArgs, InitState = #state{sock = Socket}} = _Args)
+when is_port(Socket) ->
   case Module:init(ModArgs) of
     {ok, ModState} ->
       {ok, InitState#state{state = ModState}};
