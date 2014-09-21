@@ -152,15 +152,15 @@ start(Module, Args, {_Host, _Port} = IRCServer, Options) ->
 
 %% @doc Start registered process using already prepared socket.
 %%
-%%   `ServerName' is the same as for {@link gen_server:start/4}.
+%%   `ProcessName' is the same as for {@link gen_server:start/4}.
 %%
 %%   `Options' is a proplist suitable for {@link gen_server:start/4}.
 
 -spec start(process_name(), module(), term(), server_address(), list()) ->
   {ok, pid()} | ignore | {error, term()}.
 
-start(ServerName, Module, Args, {_Host, _Port} = IRCServer, Options) ->
-  gen_server:start(ServerName, ?MODULE, [Module, Args, IRCServer], Options).
+start(ProcessName, Module, Args, {_Host, _Port} = IRCServer, Options) ->
+  gen_server:start(ProcessName, ?MODULE, [Module, Args, IRCServer], Options).
 
 %% @doc Start (linked) process using already prepared socket.
 %%
@@ -174,15 +174,15 @@ start_link(Module, Args, {_Host, _Port} = IRCServer, Options) ->
 
 %% @doc Start registered (and linked) process using already prepared socket.
 %%
-%%   `ServerName' is the same as for {@link gen_server:start_link/4}.
+%%   `ProcessName' is the same as for {@link gen_server:start_link/4}.
 %%
 %%   `Options' is a proplist suitable for {@link gen_server:start_link/4}.
 
 -spec start_link(process_name(), module(), term(), server_address(), list()) ->
   {ok, pid()} | ignore | {error, term()}.
 
-start_link(ServerName, Module, Args, {_Host, _Port} = IRCServer, Options) ->
-  gen_server:start_link(ServerName, ?MODULE, [Module, Args, IRCServer], Options).
+start_link(ProcessName, Module, Args, {_Host, _Port} = IRCServer, Options) ->
+  gen_server:start_link(ProcessName, ?MODULE, [Module, Args, IRCServer], Options).
 
 %% }}}
 %%----------------------------------------------------------
