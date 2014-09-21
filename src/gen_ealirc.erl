@@ -16,9 +16,74 @@
 %%%   == Expected callbacks ==
 %%%
 %%%   The callbacks are the same as for {@link gen_server} behaviour, with
-%%%   small addition.
+%%%   small additions.
 %%%
-%%%   `Module:handle_message(Prefix, Command, Args, State)'
+%%%   <ul>
+%%%     <li>
+%%%       `Module:connected(Socket, State)', which should return:
+%%%       <ul>
+%%%         <li>`{ok, State}'</li>
+%%%         <li>`{ok, State, Timeout}'</li>
+%%%         <li>`{ok, State, hibernate}'</li>
+%%%         <li>`{disconnect, Reason, State}'</li>
+%%%         <li>`{stop, Reason, State}'</li>
+%%%       </ul>
+%%%     </li>
+%%%     <li>
+%%%       `Module:disconnected(Reason, State)', which should return:
+%%%       <ul>
+%%%         <li>`{reconnect, After, State}'</li>
+%%%         <li>`{reconnect, {Address, Port}, After, State}'</li>
+%%%         <li>`{stop, Reason, State}'</li>
+%%%       </ul>
+%%%     </li>
+%%%     <li>
+%%%       `Module:handle_message(Prefix, Command, Args, State)', which should
+%%%       return:
+%%%       <ul>
+%%%         <li>`{noreply, State}'</li>
+%%%         <li>`{noreply, State, Timeout}'</li>
+%%%         <li>`{noreply, State, hibernate}'</li>
+%%%         <li>`{disconnect, Reason, State}'</li>
+%%%         <li>`{stop, Reason, State}'</li>
+%%%       </ul>
+%%%     </li>
+%%%   </ul>
+%%%
+%%%   === Values returned from callbacks ===
+%%%
+%%%   <ul>
+%%%     <li>`connected/2', `handle_cast/2' and `handle_info/2' additionally
+%%%         can return `{disconnect, Reason, State}'
+%%%     </li>
+%%%     <li>`handle_call/3' can return `{disconnect, Reason, State}' or
+%%%         `{disconnect, Reason, Reply, State}', 
+%%%     </li>
+%%%   </ul>
+%%%
+%%%   When `Module:init(Args)' returns `{ok, State, Timeout}', establishing
+%%%   a connection is delayed by `Timeout' instead of being immediate.
+%%%
+%%%   === Possible reasons for `disconnected/2' ===
+%%%
+%%%   There are several built-in reasons `disconnected/2' could be called
+%%%   with:
+%%%   <ul>
+%%%     <li>`{connect,Reason}', when connection could not be established
+%%%         (`Reason' is taken from `{error,Reason}' returned by {@link
+%%%         gen_tcp:connect/3})</li>
+%%%     <li>`badserver', when IRC server sent a message that could not be
+%%%         parsed</li>
+%%%     <li>`tcp_closed', when TCP connection was closed</li>
+%%%     <li>`{tcp_error, Reason}', when a TCP error occurred (`Reason' is
+%%%         taken from `{tcp_error, Socket, Reason}' message; see {@link
+%%%         gen_tcp} for details)</li>
+%%%   </ul>
+%%%
+%%% @TODO Timeout on establishing connection.
+%%% @TODO `{reconnect, ...}'
+%%% @TODO `{stop, Reason, State}' should cause `disconnected/2' to be called.
+%%%
 %%% @end
 %%%---------------------------------------------------------------------------
 
@@ -54,7 +119,13 @@
 -type server_address() :: {Host :: inet:hostname() | inet:ip_address(),
                             Port :: integer()}.
 
--record(state, {sock, mod, state, timeout = infinity}).
+-record(state, {
+  server :: server_address(),
+  sock,
+  mod,
+  state,
+  timeout = infinity
+}).
 
 %% options required for TCP connection
 -define(TCP_OPTIONS, [list, {packet, line}, {packet_size, 512}]).
@@ -69,128 +140,49 @@
 %%----------------------------------------------------------
 %% start() {{{
 
-%% @doc Start process using already prepared socket.
+%% @doc Start IRC client process.
 %%
 %%   `Options' is a proplist suitable for {@link gen_server:start/3}.
-%%
-%%   <b>NOTE</b>: The function has to be called from the process owning the
-%%   `Socket'.
-%%
-%%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
-%%   caller's responsibility.
 
--spec start(module(), term(), gen_tcp:socket() | server_address(), list()) ->
+-spec start(module(), term(), server_address(), list()) ->
   {ok, pid()} | ignore | {error, term()}.
 
-start(Module, Args, Socket, Options) ->
-  State = pre_start(Socket, Module),
-  InitArgs = {Module, Args, State},
-  case gen_server:start(?MODULE, InitArgs, Options) of
-    {ok, Pid} ->
-      post_start(State, Pid),
-      {ok, Pid};
-    Any ->
-      Any
-  end.
+start(Module, Args, {_Host, _Port} = IRCServer, Options) ->
+  gen_server:start(?MODULE, [Module, Args, IRCServer], Options).
 
 %% @doc Start registered process using already prepared socket.
 %%
 %%   `ServerName' is the same as for {@link gen_server:start/4}.
 %%
 %%   `Options' is a proplist suitable for {@link gen_server:start/4}.
-%%
-%%   <b>NOTE</b>: The function has to be called from the process owning the
-%%   `Socket'.
-%%
-%%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
-%%   caller's responsibility.
 
--spec start(process_name(), module(), term(),
-            gen_tcp:socket() | server_address(), list()) ->
+-spec start(process_name(), module(), term(), server_address(), list()) ->
   {ok, pid()} | ignore | {error, term()}.
 
-start(ServerName, Module, Args, Socket, Options) ->
-  State = pre_start(Socket, Module),
-  InitArgs = {Module, Args, State},
-  case gen_server:start(ServerName, ?MODULE, InitArgs, Options) of
-    {ok, Pid} ->
-      post_start(State, Pid),
-      {ok, Pid};
-    Any ->
-      Any
-  end.
+start(ServerName, Module, Args, {_Host, _Port} = IRCServer, Options) ->
+  gen_server:start(ServerName, ?MODULE, [Module, Args, IRCServer], Options).
 
 %% @doc Start (linked) process using already prepared socket.
 %%
 %%   `Options' is a proplist suitable for {@link gen_server:start_link/4}.
-%%
-%%   <b>NOTE</b>: The function has to be called from the process owning the
-%%   `Socket'.
-%%
-%%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
-%%   caller's responsibility.
 
--spec start_link(module(), term(),
-                 gen_tcp:socket() | server_address(), list()) ->
+-spec start_link(module(), term(), server_address(), list()) ->
   {ok, pid()} | ignore | {error, term()}.
 
-start_link(Module, Args, Socket, Options) ->
-  State = pre_start(Socket, Module),
-  InitArgs = {Module, Args, State},
-  case gen_server:start_link(?MODULE, InitArgs, Options) of
-    {ok, Pid} ->
-      post_start(State, Pid),
-      {ok, Pid};
-    Any ->
-      Any
-  end.
+start_link(Module, Args, {_Host, _Port} = IRCServer, Options) ->
+  gen_server:start_link(?MODULE, [Module, Args, IRCServer], Options).
 
 %% @doc Start registered (and linked) process using already prepared socket.
 %%
 %%   `ServerName' is the same as for {@link gen_server:start_link/4}.
 %%
 %%   `Options' is a proplist suitable for {@link gen_server:start_link/4}.
-%%
-%%   <b>NOTE</b>: The function has to be called from the process owning the
-%%   `Socket'.
-%%
-%%   <b>NOTE</b>: The function doesn't close TCP socket on error. It's the
-%%   caller's responsibility.
 
--spec start_link(process_name(), module(), term(),
-                 gen_tcp:socket() | server_address(), list()) ->
+-spec start_link(process_name(), module(), term(), server_address(), list()) ->
   {ok, pid()} | ignore | {error, term()}.
 
-start_link(ServerName, Module, Args, Socket, Options) ->
-  State = pre_start(Socket, Module),
-  InitArgs = {Module, Args, State},
-  case gen_server:start_link(ServerName, ?MODULE, InitArgs, Options) of
-    {ok, Pid} ->
-      post_start(State, Pid),
-      {ok, Pid};
-    Any ->
-      Any
-  end.
-
-%% pre and post start {{{
-
-pre_start({_Host, _Port} = Socket, Module) ->
-  #state{sock = Socket, mod = Module};
-
-pre_start(Socket, Module) when is_port(Socket) ->
-  % set required options for the socket (for now make it passive)
-  ok = inet:setopts(Socket, [{active, false} | ?TCP_OPTIONS]),
-  #state{sock = Socket, mod = Module}.
-
-post_start(_State = #state{sock = {_Host, _Port}}, _Child) ->
-  ok;
-
-post_start(_State = #state{sock = Socket}, Child) when is_port(Socket) ->
-  gen_tcp:controlling_process(Socket, Child),
-  ok = inet:setopts(Socket, [{active, true}]),
-  ok.
-
-%% }}}
+start_link(ServerName, Module, Args, {_Host, _Port} = IRCServer, Options) ->
+  gen_server:start_link(ServerName, ?MODULE, [Module, Args, IRCServer], Options).
 
 %% }}}
 %%----------------------------------------------------------
@@ -482,6 +474,7 @@ behaviour_info(callbacks) ->
     {code_change, 3}
   ],
   CustomCallbacks = [
+    {connected, 2}, {disconnected, 2},
     {handle_message, 4}
   ],
   GenServerCallbacks ++ CustomCallbacks;
@@ -499,34 +492,32 @@ behaviour_info(_Any) ->
 %% @private
 %% @doc Initialize {@link gen_server} state.
 
-init({Module, ModArgs, InitState = #state{sock = {Host, Port}} } = _Args) ->
-  case gen_tcp:connect(Host, Port, [{active, true} | ?TCP_OPTIONS]) of
-    {ok, Socket} ->
-      init({Module, ModArgs, InitState#state{sock = Socket}});
-    {error, Reason} ->
-      {stop, Reason}
-  end;
-
-init({Module, ModArgs, InitState = #state{sock = Socket}} = _Args)
-when is_port(Socket) ->
+init([Module, ModArgs, {_Host, _Port} = Server] = _Args) ->
   case Module:init(ModArgs) of
-    {ok, ModState} ->
-      {ok, InitState#state{state = ModState}};
-    {ok, ModState, hibernate} ->
-      {ok, InitState#state{state = ModState}, hibernate};
-    {ok, ModState, Timeout} ->
-      {ok, InitState#state{state = ModState, timeout = Timeout}, Timeout};
-    Any ->
-      Any
+    {ok, MState} ->
+      State = #state{server = Server, mod = Module, state = MState},
+      {ok, State, 0};
+    {ok, MState, hibernate} ->
+      State = #state{server = Server, mod = Module, state = MState},
+      {ok, State, hibernate}; % TODO: or timeout = 0 and try to connect?
+    {ok, MState, Timeout} ->
+      State = #state{server = Server, mod = Module, state = MState, timeout = Timeout},
+      {ok, State, Timeout};
+    ignore ->
+      ignore;
+    {error, Reason} ->
+      {error, Reason}
   end.
 
 %% @private
 %% @doc Clean up {@link gen_server} state.
 
-terminate(Reason, _State = #state{sock = Sock, mod = Mod, state = MState}) ->
-  Result = Mod:terminate(Reason, MState),
-  gen_tcp:close(Sock),
-  Result.
+terminate(Reason, State = #state{sock = Socket}) when is_port(Socket) ->
+  gen_tcp:close(Socket),
+  terminate(Reason, State#state{sock = undefined});
+
+terminate(Reason, _State = #state{mod = Mod, state = MState}) ->
+  Mod:terminate(Reason, MState).
 
 %% }}}
 %%----------------------------------------------------------
@@ -543,12 +534,21 @@ handle_call(Request, From, State = #state{mod = Mod, state = MState}) ->
       {reply, Reply, State#state{state = NewMState, timeout = infinity}, hibernate};
     {reply, Reply, NewMState, Timeout} ->
       {reply, Reply, State#state{state = NewMState, timeout = Timeout}, Timeout};
+
     {noreply, NewMState} ->
       {noreply, State#state{state = NewMState, timeout = infinity}};
     {noreply, NewMState, hibernate} ->
       {noreply, State#state{state = NewMState, timeout = infinity}, hibernate};
     {noreply, NewMState, Timeout} ->
       {noreply, State#state{state = NewMState, timeout = Timeout}, Timeout};
+
+    {disconnect, Reason, NewMState} ->
+      do_disconnect(Reason, State#state{state = NewMState});
+
+    {disconnect, Reason, Reply, NewMState} ->
+      NewState = State#state{state = NewMState, timeout = infinity},
+      do_disconnect_reply(Reason, Reply, NewState);
+
     {stop, Reason, Reply, NewMState} ->
       {stop, Reason, Reply, State#state{state = NewMState}};
     {stop, Reason, NewMState} ->
@@ -558,7 +558,7 @@ handle_call(Request, From, State = #state{mod = Mod, state = MState}) ->
 %% @private
 %% @doc Handle {@link gen_server:cast/2}.
 
-%% generic command
+%% generic IRC command
 handle_cast({'$gen_irc_quote', CommandLine} = _Request,
             State = #state{sock = Sock}) ->
   case gen_tcp:send(Sock, [CommandLine, "\r\n"]) of
@@ -572,7 +572,7 @@ handle_cast({'$gen_irc_quote', CommandLine} = _Request,
           {noreply, State, Timeout}
       end;
     {error, Reason} ->
-      {stop, Reason, State}
+      do_disconnect(Reason, State)
   end;
 
 handle_cast(Request, State = #state{mod = Mod, state = MState}) ->
@@ -583,12 +583,26 @@ handle_cast(Request, State = #state{mod = Mod, state = MState}) ->
       {noreply, State#state{state = NewMState, timeout = infinity}, hibernate};
     {noreply, NewMState, Timeout} ->
       {noreply, State#state{state = NewMState, timeout = Timeout}, Timeout};
+
+    {disconnect, Reason, NewMState} ->
+      do_disconnect(Reason, State#state{state = NewMState});
+
     {stop, Reason, NewMState} ->
       {stop, Reason, State#state{state = NewMState}}
   end.
 
 %% @private
 %% @doc Handle incoming messages.
+
+%% "reconnect after" message
+handle_info(timeout = _Msg,
+            State = #state{sock = undefined, server = {Host, Port}}) ->
+  case gen_tcp:connect(Host, Port, [{active, true} | ?TCP_OPTIONS]) of
+    {ok, Socket} ->
+      do_connect(State#state{sock = Socket, timeout = infinity});
+    {error, Reason} ->
+      do_disconnect({connect, Reason}, State)
+  end;
 
 %% line from socket
 handle_info({tcp, Sock, Line} = _Msg,
@@ -602,25 +616,27 @@ handle_info({tcp, Sock, Line} = _Msg,
           {noreply, State#state{state = NewMState, timeout = infinity}, hibernate};
         {noreply, NewMState, Timeout} ->
           {noreply, State#state{state = NewMState, timeout = Timeout}, Timeout};
+
+        {disconnect, Reason, NewMState} ->
+          do_disconnect(Reason, State#state{state = NewMState});
+
         {stop, Reason, NewMState} ->
           {stop, Reason, State#state{state = NewMState}}
       end;
     {error, _Reason} ->
       % server should never pass an invalid line
       % TODO: log the event
-      {stop, badserver, State}
+      do_disconnect(badserver, State)
   end;
 
 %% EOF
 handle_info({tcp_closed, Sock} = _Msg, State = #state{sock = Sock}) ->
-  % TODO: log the event
-  % FIXME: or pass this to `handle_message/4'?
-  {stop, normal, State};
+  do_disconnect(tcp_closed, State);
 
 %% connection error
 handle_info({tcp_error, Sock, Reason} = _Msg, State = #state{sock = Sock}) ->
   % TODO: log the event
-  {stop, Reason, State};
+  do_disconnect({tcp_error, Reason}, State);
 
 %% unknown message
 handle_info(Msg, State = #state{mod = Mod, state = MState}) ->
@@ -631,6 +647,10 @@ handle_info(Msg, State = #state{mod = Mod, state = MState}) ->
       {noreply, State#state{state = NewMState, timeout = infinity}, hibernate};
     {noreply, NewMState, Timeout} ->
       {noreply, State#state{state = NewMState, timeout = Timeout}, Timeout};
+
+    {disconnect, Reason, NewMState} ->
+      do_disconnect(Reason, State#state{state = NewMState});
+
     {stop, Reason, NewMState} ->
       {stop, Reason, State#state{state = NewMState}}
   end.
@@ -652,7 +672,64 @@ code_change(OldVsn, State = #state{mod = Mod, state = MState}, Extra) ->
 
 %% }}}
 %%----------------------------------------------------------
+%% helper functions {{{
+
+do_connect(State = #state{sock = Socket, mod = Mod, state = MState}) ->
+  case Mod:connected(Socket, MState) of
+    {ok, NewMState} ->
+      {noreply, State#state{state = NewMState, timeout = infinity}};
+    {ok, NewMState, hibernate} ->
+      {noreply, State#state{state = NewMState, timeout = infinity}, hibernate};
+    {ok, NewMState, Timeout} ->
+      {noreply, State#state{state = NewMState, timeout = Timeout}, Timeout};
+
+    {disconnect, DisconnectReason, NewMState} ->
+      do_disconnect(DisconnectReason, State#state{state = NewMState});
+
+    {stop, StopReason, NewMState} ->
+      {stop, StopReason, State#state{state = NewMState, timeout = infinity}}
+  end.
+
+do_disconnect(Reason, State = #state{sock = Socket}) when is_port(Socket) ->
+  gen_tcp:close(Socket),
+  do_disconnect(Reason, State#state{sock = undefined});
+
+do_disconnect(Reason, State = #state{mod = Mod, state = MState}) ->
+  case Mod:disconnected(Reason, MState) of
+    {reconnect, ReconnectAfter, NewMState} ->
+      NewState = State#state{
+        state = NewMState,
+        timeout = ReconnectAfter
+      },
+      {noreply, NewState, ReconnectAfter};
+
+    {reconnect, {Address, Port}, ReconnectAfter, NewMState} ->
+      NewState = State#state{
+        server = {Address, Port},
+        state = NewMState,
+        timeout = ReconnectAfter
+      },
+      {noreply, NewState, ReconnectAfter};
+
+    {stop, StopReason, NewMState} ->
+      NewState = State#state{
+        state = NewMState,
+        timeout = infinity
+      },
+      {stop, StopReason, NewState}
+  end.
+
+do_disconnect_reply(Reason, Reply, State) ->
+  case do_disconnect(Reason, State) of
+    {noreply, NewState, After} ->
+      {reply, Reply, NewState, After};
+    {stop, StopReason, NewState} ->
+      {stop, StopReason, NewState}
+  end.
+
+%% }}}
+%%----------------------------------------------------------
 
 %%% }}}
 %%%---------------------------------------------------------------------------
-%%% vim:ft=erlang:foldmethod=marker
+%%% vim:ft=erlang:foldmethod=marker:nowrap

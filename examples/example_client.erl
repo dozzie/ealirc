@@ -4,7 +4,7 @@
 %%%
 %%%   Usage (to be simplified):
 %%%   ```
-%%%   {ok, Pid} = example_client:connect("chat.example.net", 6667, "mynick"),
+%%%   {ok, Pid} = example_client:start("chat.example.net", 6667, "mynick"),
 %%%   gen_ealirc:join(Pid, ["#atled"]),
 %%%   % sending raw commands
 %%%   {ok, Cmd} = ealirc_proto:privmsg("#atled", "a message"),
@@ -18,10 +18,11 @@
 -behaviour(gen_ealirc).
 
 %%% public API
--export([connect/3]).
+-export([start/3]).
 
 %%% gen_ealirc callbacks
 -export([init/1, terminate/2]).
+-export([connected/2, disconnected/2]).
 -export([handle_call/3, handle_cast/2, handle_info/2, handle_message/4]).
 -export([code_change/3]).
 
@@ -32,7 +33,7 @@
 %%%---------------------------------------------------------------------------
 %%% public API
 
-connect(Server, Port, Nick) ->
+start(Server, Port, Nick) ->
   gen_ealirc:start(?MODULE, [Nick], {Server, Port}, []).
 
 %%%---------------------------------------------------------------------------
@@ -45,8 +46,6 @@ connect(Server, Port, Nick) ->
 %% @doc Initialize {@link gen_ealirc} state.
 
 init([Nick] = _Args) ->
-  gen_ealirc:nick(self(), Nick),
-  gen_ealirc:user(self(), Nick, none, Nick),
   {ok, #state{nick = Nick}}.
 
 %% @private
@@ -54,6 +53,27 @@ init([Nick] = _Args) ->
 
 terminate(_Reason, _State) ->
   ok.
+
+%% @private
+%% @doc Initialize server connection (e.g. set nickname).
+
+connected(_Socket, State = #state{nick = Nick}) ->
+  io:fwrite("<~s> connected to IRC server~n", [Nick]),
+  gen_ealirc:nick(self(), Nick),
+  gen_ealirc:user(self(), Nick, none, Nick),
+  {ok, State}.
+
+%% @private
+%% @doc Connection lost handler.
+
+disconnected({connect,_} = _Reason, State = #state{nick = Nick}) ->
+  io:fwrite("<~s> couldn't connect to server, retrying in 10s~n", [Nick]),
+  {reconnect, 10000, State};
+
+disconnected(Reason, State = #state{nick = Nick}) ->
+  io:fwrite("<~s> lost server connection: ~1024p, retrying in 10s~n",
+            [Nick, Reason]),
+  {reconnect, 10000, State}.
 
 %% }}}
 %%----------------------------------------------------------
